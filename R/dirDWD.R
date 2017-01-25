@@ -1,0 +1,47 @@
+#' directory management for rdwd
+#'
+#' Manage directories with useful messages in the rdwd package.
+#'
+#' @name dirDWD
+#' @return dirDWD invisibly returns the prior working directory as per \code{\link{setwd}}.
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct 2016
+#' @seealso \code{\link{fileDWD}}, \code{\link{dataDWD}}
+#' @keywords file
+#' @export
+#' @examples
+#' # see source code of dataDWD and metaDWD
+#'
+#' \dontrun{ ## folder creation + deletion
+#' owd <- getwd(); owd
+#' dirDWD("dummydummydummy")
+#' getwd()
+#' setwd(owd)
+#' dirDWD("dummydummydummy")
+#' setwd(owd)
+#' unlink("dummydummydummy")
+#' }
+#'
+#' @param dir      Char for dirDWD: writeable directory name. Created if not existent.
+#'                 DEFAULT: "DWDdata" at current \code{\link{getwd}()}
+#' @param quiet    Logical: Suppress messages about creating dir? DEFAULT: FALSE
+#'
+dirDWD <- function(
+dir="DWDdata",
+quiet=FALSE
+)
+{
+dir <- dir[1]
+if(dir=="")
+  {
+  if(!quiet) message("rdwd::dirDWD: no directory is created, getwd remains at '", getwd(), "'")
+  return(getwd())
+  }
+#
+if(!file.exists(dir))
+  {
+  dir.create(dir)
+  if(!quiet) message("rdwd::dirDWD: creating directory '",   normalizePath(dir, winslash="/"), "'")
+  } else
+  if(!quiet) message("rdwd::dirDWD: adding to directory '", normalizePath(dir, winslash="/"), "'")
+setwd(dir)
+}

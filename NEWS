@@ -1,0 +1,31 @@
+
+rdwd ToDo-list / wishlist / issues
+- translations for colnames (in doc only? metaIndex / vs current=TRUE)
+- improve readability of dates, at least in metaInfo print (1953-04-16)
+- After package is on CRAN, link to map and vignette in the readME.
+- change tests to actually test stuff, maybe add third vignette
+
+
+---------------------------------------
+rdwd: DWD Climate Data access package by Berry Boessenkool, berry-b@gmx.de
+Any feedback is welcome, per email or on github.com/brry/rdwd
+---------------------------------------
+
+
+Version 0.6.1 (2017-01-24)
+Initial release of the package, development can be seen at
+https://github.com/brry/rdwd/compare/master@{2016-10-19}...master@{2017-01-24}
+
+'selectDWD' uses index information to find files matching a path or station criteria.
+With the returned path/file names, 'dataDWD' and 'readDWD' download and read data.
+'dirDWD' and 'fileDWD' control that no file will be overwritten and path messages are useful.
+'indexDWD' lists all the files on the FTP server with DWD data.
+'createIndex' uses that list to create 'fileIndex', 'metaIndex' and 'geoIndex'.
+'mapDWD' is an interactive leaflet map also useful to explore datasets.
+
+Note: 'dataDWD' and 'readDWD' were started in June 2016 within my misc package
+berryFunctions, from which they will be deleted after rdwd is on CRAN
+
+-----------------------------
+-----------------------------
+

@@ -1,0 +1,18 @@
+---
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{mapDWD}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+[rdwd main vignette](rdwd.html)
+
+
+The first line of the info box (when you click on a point)
+can be copypasted into R to obtain more information on the available files
+
+```{r map, fig.height=7, fig.width=7, warning=FALSE}
+library(rdwd)  ;  data(mapDWD)  ;  library(leaflet)  ;  mapDWD
+```
+
