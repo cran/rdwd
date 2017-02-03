@@ -11,7 +11,7 @@
 #' @seealso \code{\link{dirDWD}}, \code{\link{dataDWD}}
 #' @keywords file
 #' @importFrom tools file_ext file_path_sans_ext
-#' @importFrom berryFunctions truncMessage
+#' @importFrom berryFunctions truncMessage traceCall
 #' @export
 #' @examples
 #' # see source code of dataDWD and metaDWD
@@ -62,10 +62,14 @@ existed <- as.logical(existed)
 if(!quiet)
   {
   # message names:
-  n_e <- sum(existed, na.rm=TRUE)
-  message("rdwd::fileDWD: Creating ",length(fnames)," file", if(length(fnames)>1) "s",
-          if(n_e>0) paste0(" (",n_e," already existed for which '_n' is appended)"), ":",
-          truncMessage(fnames, ntrunc=ntrunc, prefix=""))
+  n_e <- sum(existed, na.rm=TRUE) # number of existing files
+  n_n <- sum(!is.na(existed)) # number of new files
+  n_i <- sum(is.na(existed)) # number of ignored files
+  message(traceCall(1, "", ": "),
+          if(n_i>0) paste0("ignoring ", n_i, " file", if(n_i>1) "s", "; "),
+          if(n_n>0) paste0("creating ", n_n, " file", if(n_n>1) "s"),
+          if(n_e>0) paste0(" (",n_e," already existed for which '_n' is appended)"),
+          ":", truncMessage(fnames, ntrunc=ntrunc, prefix=""))
   }
 fnames
 }

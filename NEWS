@@ -1,8 +1,6 @@
 
 rdwd ToDo-list / wishlist / issues
 - translations for colnames (in doc only? metaIndex / vs current=TRUE)
-- improve readability of dates, at least in metaInfo print (1953-04-16)
-- After package is on CRAN, link to map and vignette in the readME.
 - change tests to actually test stuff, maybe add third vignette
 
 
@@ -10,6 +8,25 @@ rdwd ToDo-list / wishlist / issues
 rdwd: DWD Climate Data access package by Berry Boessenkool, berry-b@gmx.de
 Any feedback is welcome, per email or on github.com/brry/rdwd
 ---------------------------------------
+
+
+-----------------------------
+-----------------------------
+
+Version 0.7.0 (2017-02-03)
+- interactive map now colored by availability of recent file
+- stations with slightly varying coordinates (<900 m apart) aggregated in geoIndex
+- documentation corrections, improved messages in fileDWD and dirDWD
+- map vignette expanded, package vignette abbreviated slightly
+- metaInfo printout greatly improved
+- duplicate index entries removed
+New function: rowDisplay
+New object: geoIndexAll
+Removed object: mapDWD (to reduce package size)
+
+
+-----------------------------
+-----------------------------
 
 
 Version 0.6.1 (2017-01-24)

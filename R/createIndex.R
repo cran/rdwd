@@ -4,7 +4,7 @@
 #' Create data.frames out of the vector index returned by \code{\link{indexDWD}}.
 #' For \code{\link{fileIndex}} (the first output element) \code{createIndex}
 #' tries to obtain res, var, pe,r file, id, start and end from the paths.
-#' If \code{meta=TRUE}, \code{\link{metaIndex}} and \code{\link{geoIndex}} are also
+#' If \code{meta=TRUE}, \code{\link{metaIndex}} and \code{\link{geoIndexAll}} are also
 #' created. They combine all Beschreibung files into a single data.frame.\cr
 #' If you create your own index as suggested in selectDWD (argument \code{findex}),
 #' you can read the produced file as shown in the example section.
@@ -30,7 +30,7 @@
 #'
 #' # For real usage, see last part of
 #' if(interactive())
-#' browseURL("https://github.com/brry/rdwd/blob/master/R/rdwd-package.R")
+#' browseURL("https://github.com/brry/rdwd/blob/master/R/meta.R")
 #' # where fileIndex and metaIndex are added to the package
 #'
 #' # Read results in later:
@@ -57,7 +57,7 @@
 #' @param mname Char: Name of file in \code{dir} (not \code{metadir}) in which to
 #'              write \code{\link{metaIndex}}.
 #'              Use \code{mname=""} to suppress writing. DEFAULT: "metaIndex.txt"
-#' @param gname Ditto for \code{\link{geoIndex}}. DEFAULT: "geoIndex.txt"
+#' @param gname Ditto for \code{\link{geoIndexAll}}. DEFAULT: "geoIndexAll.txt"
 #' @param quiet Logical: Suppress messages about directory / filename? DEFAULT: FALSE
 #' @param \dots  Further arguments passed to \code{\link{dataDWD}} for the meta part.
 #'
@@ -69,7 +69,7 @@ fname="fileIndex.txt",
 meta=FALSE,
 metadir="meta",
 mname="metaIndex.txt",
-gname="geoIndex.txt",
+gname="geoIndexAll.txt",
 quiet=FALSE,
 ...
 )
@@ -132,7 +132,7 @@ if(sum(sel)<2) stop("There need to be at least two 'Beschreibung' files. (There 
 # download those files:
 metas <- dataDWD(paste0(base,fileIndex[sel, "path"]), dir=metadir, ...)
 # filenames <- substr(gsub("/","_",fileIndex[sel, "path"]),2,1e4)
-# metas <- readDWD(paste0("DWDdata/meta/",filenames))
+# metas <- readDWD(filenames, dir="DWDdata/meta")
 for(i in seq_along(metas))
   {
   metas[[i]]$res <- fileIndex[sel, "res"][i]
@@ -172,45 +172,52 @@ if(mname!="")
   }
 #
 #
-# geoIndex ---------------------------------------------------------------------
-if(!quiet) message("Creating geoIndex...")
+# geoIndexAll ------------------------------------------------------------------
+if(!quiet) message("Creating geoIndexAll...")
 # metaIndex                                               Nov 2016 # 38'516 rows
+mtemp <- metaIndex
+mtemp$recentfile <- mtemp$per=="recent" | mtemp$bis_datum > as.numeric(format(Sys.Date()-365,"%Y%m%d"))
+mtemp$recentfile <- mtemp$recentfile & mtemp$hasfile
 # only use entries with file, ignore date range and hasfile columns:
-geoIndex <- unique(metaIndex[metaIndex$hasfile,-c(2,3,12)])        # 25'482 rows
+geoIndexAll <- unique(mtemp[mtemp$hasfile,-c(2,3,12)])        # 25'482 rows
 # unique locations:
-geoIndex$coord <- paste(geoIndex$geoBreite, geoIndex$geoLaenge, sep="_")
+geoIndexAll$coord <- paste(geoIndexAll$geoBreite, geoIndexAll$geoLaenge, sep="_")
 # id column
-geoIndex$id <- geoIndex$Stations_id
+geoIndexAll$id <- geoIndexAll$Stations_id
 # all station names:
-name <- tapply(geoIndex$Stationsname, geoIndex$coord, unique)
+name <- tapply(geoIndexAll$Stationsname, geoIndexAll$coord, unique)
 name <- sapply(name, paste, collapse=" _ ")
-geoIndex$name <- name[geoIndex$coord]
+geoIndexAll$name <- name[geoIndexAll$coord]
 rm(name)
 # lowercase + english column name
-geoIndex$state <- geoIndex$Bundesland
+geoIndexAll$state <- geoIndexAll$Bundesland
 # coordinate columns
-geoIndex$lat <- geoIndex$geoBreite
-geoIndex$long <- geoIndex$geoLaenge
+geoIndexAll$lat <- geoIndexAll$geoBreite
+geoIndexAll$long <- geoIndexAll$geoLaenge
 # average elevation:
-geoIndex$ele <- round(as.numeric(tapply(geoIndex$Stationshoehe,
-                        geoIndex$coord, mean)[geoIndex$coord]), 2)
+geoIndexAll$ele <- round(as.numeric(tapply(geoIndexAll$Stationshoehe,
+                        geoIndexAll$coord, mean)[geoIndexAll$coord]), 2)
 # all elevation entries:
-ele <- tapply(geoIndex$Stationshoehe, geoIndex$coord, table)
+ele <- tapply(geoIndexAll$Stationshoehe, geoIndexAll$coord, table)
 ele <- sapply(ele, function(x) paste0(names(x), "(", x, ")", collapse="_"))
-geoIndex$all_elev <- ele[geoIndex$coord]
+geoIndexAll$all_elev <- ele[geoIndexAll$coord]
 rm(ele)
 # nuber of files per coordinate set:
-geoIndex$nfiles_coord <- as.integer(table(geoIndex$coord)[geoIndex$coord])
+geoIndexAll$nfiles_coord <- as.integer(table(geoIndexAll$coord)[geoIndexAll$coord])
 # nuber of files per ID:
-geoIndex$nfiles_id <- as.integer(table(geoIndex$Stations_id)[as.character(geoIndex$Stations_id)])
+geoIndexAll$nfiles_id <- as.integer(table(geoIndexAll$Stations_id)[as.character(geoIndexAll$Stations_id)])
+geoIndexAll$recentfile <- tapply(geoIndexAll$recentfile, geoIndexAll$coord, any)[geoIndexAll$coord]
 # reduction of duplicated rows:
-geoIndex <- geoIndex[!duplicated(geoIndex$coord), 11:19]           #  6'927 rows
+geoIndexAll <- geoIndexAll[!duplicated(geoIndexAll$coord), c(12:20,10)]           #  6'927 rows
+# popup display column:
+geoIndexAll$display <- rowDisplay(geoIndexAll)
 # Write to disc
 if(gname!="")
   {
   outfile <- fileDWD(gname, quiet=quiet)
-  write.table(geoIndex, file=outfile, sep="\t", row.names=FALSE, quote=FALSE)
+  write.table(geoIndexAll, file=outfile, sep="\t", row.names=FALSE, quote=FALSE)
   }
+#
 # Output -----------------------------------------------------------------------
-return(invisible(list(fileIndex=fileIndex, metaIndex=metaIndex, geoIndex=geoIndex)))
+return(invisible(list(fileIndex=fileIndex, metaIndex=metaIndex, geoIndexAll=geoIndexAll)))
 }

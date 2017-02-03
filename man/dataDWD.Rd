@@ -6,7 +6,7 @@
 \usage{
 dataDWD(file, dir = "DWDdata", force = FALSE, sleep = 0, quiet = FALSE,
   progbar = !quiet, browse = FALSE, read = TRUE, meta = substr(file,
-  nchar(file) - 3, 10000) == ".txt", format = NA, ntrunc = 3, ...)
+  nchar(file) - 3, 10000) == ".txt", format = NA, ntrunc = 2, ...)
 }
 \arguments{
 \item{file}{Char (vector): complete file URL(s) (including base and filename.zip) as returned by
@@ -43,7 +43,7 @@ only download is performed and the filename(s) returned. DEFAULT: TRUE}
 see \code{\link{readDWD}}. DEFAULT: NA}
 
 \item{ntrunc}{Single integer: number of filenames printed in messages
-before they get truncated with message "(and xx more)". DEFAULT: 3}
+before they get truncated with message "(and xx more)". DEFAULT: 2}
 
 \item{\dots}{Further arguments passed to \code{\link{download.file}}}
 }
@@ -113,14 +113,13 @@ browseURL("http://github.com/brry/prectemp/blob/master/Code_example.R")
 }
 
 }
-\author{
-Berry Boessenkool, \email{berry-b@gmx.de}, Jun-Oct 2016
-}
 \seealso{
 \code{\link{selectDWD}}. \code{\link{readDWD}}, \code{\link{download.file}}.
          Helpful for plotting: \code{berryFunctions::\link[berryFunctions]{monthAxis}},
          see also \code{berryFunctions::\link[berryFunctions]{climateGraph}}
 }
+\author{
+Berry Boessenkool, \email{berry-b@gmx.de}, Jun-Oct 2016
+}
 \keyword{data}
 \keyword{file}
-

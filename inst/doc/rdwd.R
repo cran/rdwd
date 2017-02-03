@@ -12,7 +12,7 @@ library(rdwd)
 ## ----basics, eval=TRUE---------------------------------------------------
 tdir <- tempdir()
 link <- selectDWD("Potsdam", res="daily", var="kl", per="recent")
-file <- dataDWD(link, read=FALSE, dir=tdir)
+file <- dataDWD(link, read=FALSE, dir=tdir, quiet=TRUE)
 clim <- readDWD(file, dir=tdir)
 
 str(clim)
@@ -26,7 +26,7 @@ mtext("Source: Deutscher Wetterdienst", adj=-0.1, line=0.5, font=3)
 ## ----climgraph, eval=TRUE, fig.height=3, fig.width=7, echo=-1------------
 par(mar=c(4,4,2,0.5), mgp=c(2.7, 0.8, 0), cex=0.8)
 link <- selectDWD("Potsdam", res="monthly", var="kl", per="h")
-clim <- dataDWD(link)
+clim <- dataDWD(link, quiet=TRUE)
 clim$month <- substr(clim$MESS_DATUM_BEGINN,5,6)
 temp <- tapply(clim$LUFTTEMPERATUR, clim$month, mean)
 prec <- tapply(clim$NIEDERSCHLAGSHOEHE, clim$month, mean)
@@ -37,9 +37,6 @@ mtext("Source: Deutscher Wetterdienst", adj=-0.05, line=2.8, font=3)
 ## ----findID, eval=TRUE---------------------------------------------------
 findID("Potsdam")
 findID("Koeln", exactmatch=FALSE)
-
-## ----fileIndex, eval=TRUE------------------------------------------------
-head(rdwd:::fileIndex) # 28'798 rows in Jan 2017 (with some almost duplicate files)
 
 ## ----files, eval=FALSE---------------------------------------------------
 #  # all files at a given path, with current file index (RCurl required):

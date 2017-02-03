@@ -4,6 +4,7 @@
 \name{rdwd}
 \alias{rdwd}
 \alias{rdwd-package}
+\alias{rdwd-package}
 \title{Download Climate Data from DWD (German Weather Service)}
 \description{
 Select weather data from the DWD (Deutscher Wetterdienst) with  \code{\link{selectDWD}}. \cr
@@ -36,13 +37,19 @@ soil_temperature < \tab | soil_temperature < \tab |               \cr
 solar -            \tab | solar -            \tab |               \cr
 }
 }
-\author{
-Berry Boessenkool, \email{berry-b@gmx.de}, June-Nov 2016
+\section{Searchability Terms}{
+
+Weather Data Germany download with R, Climate Data Germany\cr
+Deutscher Wetterdienst R Daten download Klimastationen\cr
+DWD Daten mit R runterladen, Wetter und Klimadaten in R\cr
 }
+
 \seealso{
 USA data: \url{https://www.rdocumentation.org/packages/countyweather},
          \url{https://www.rdocumentation.org/packages/rnoaa}\cr
 }
+\author{
+Berry Boessenkool, \email{berry-b@gmx.de}, June-Nov 2016
+}
 \keyword{documentation}
 \keyword{package}
-

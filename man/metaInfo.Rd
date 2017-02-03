@@ -12,7 +12,7 @@ metaInfo(id, hasfileonly = TRUE)
 \item{hasfileonly}{Logical: Only show entries that have files? DEFAULT: TRUE}
 }
 \value{
-invisible data.frame. Also \code{\link{print}s} the output.
+invisible data.frame. Also \code{\link{print}s} the output nicely formatted.
 }
 \description{
 Information for a station ID on the DWD CDC FTP server
@@ -21,11 +21,10 @@ Information for a station ID on the DWD CDC FTP server
 metaInfo(2849)
 
 }
+\seealso{
+\code{\link{metaIndex}}, \code{\link{geoIndex}}
+}
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Nov 2016
 }
-\seealso{
-\code{\link{metaIndex}}, \code{\link{mapDWD}}
-}
 \keyword{datasets}
-

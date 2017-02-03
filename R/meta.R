@@ -83,9 +83,9 @@ data(metaIndex, envir=environment())
 
 #' Information for a station ID on the DWD CDC FTP server
 #'
-#' @return invisible data.frame. Also \code{\link{print}s} the output.
+#' @return invisible data.frame. Also \code{\link{print}s} the output nicely formatted.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Nov 2016
-#' @seealso \code{\link{metaIndex}}, \code{\link{mapDWD}}
+#' @seealso \code{\link{metaIndex}}, \code{\link{geoIndex}}
 #' @keywords datasets
 #' @importFrom berryFunctions sortDF
 #' @export
@@ -101,25 +101,41 @@ metaInfo <- function(
   )
 {
 # ID preparation:
-id <- as.integer(id)
+id <- as.integer(id[1])
 # Selection of rows:
 sel <- metaIndex$Stations_id==id
+if(sum(sel)<1) stop("metaIndex contains no entries for id=", id,
+                    ". This ID probably does not exist.")
 if(hasfileonly) sel <- sel & metaIndex$hasfile
 # Output preparation:
 out <- metaIndex[sel,]
-# Print preparation:
-printout <- t(cbind(out, data.frame("."="")))
-colnames(printout) <- 1:ncol(printout)
-print(printout, quote=FALSE)
-# Print unique paths:
-#cat(sort(unique(paste(out$res, out$var, out$per, sep="/"))), sep="\n")
-printout <- unique(data.frame(out$res, out$var, out$per))
-colnames(printout) <- c("res","var","per")
-printout <- sortDF(printout, "per", decreasing=FALSE)
-printout <- sortDF(printout, "var", decreasing=FALSE)
-printout <- sortDF(printout, "res", decreasing=FALSE)
-rownames(printout) <- NULL
-print(printout, quote=FALSE)
+out$von_datum <- as.Date(as.character(out$von_datum), "%Y%m%d")
+out$bis_datum <- as.Date(as.character(out$bis_datum), "%Y%m%d")
+#
+# Print preparation I:
+p_id <- toString(unique(out$Stations_id))
+p_sn <- toString(unique(out$Stationsname))
+p_bl <- toString(unique(out$Bundesland))
+p_nf <- length(unique(paste(out$res, out$var, out$per)))
+# message I:
+message("rdwd station id ", p_id, " with ", p_nf, " files.\nName: ", p_sn, ", State: ", p_bl)
+#
+# Print preparation II:
+p_out <- data.frame(from=out$von_datum,
+                    to=out$bis_datum,
+                    lat=out$geoBreite,
+                    long=out$geoLaenge,
+                    ele=out$Stationshoehe)
+p_out <- cbind(out[,c("res","var","per","hasfile")], p_out)
+p_out$from <- as.character(p_out$from)
+p_out$from[p_out$per=="recent"] <- ""
+p_out <- sortDF(p_out, "var", decreasing=FALSE)
+p_out <- sortDF(p_out, "res", decreasing=FALSE)
+p_out <- sortDF(p_out, "per", decreasing=FALSE)
+rownames(p_out) <- NULL
+# print II:
+print(p_out, quote=FALSE)
+#
 # Output:
 return(invisible(out))
 }
@@ -131,16 +147,24 @@ return(invisible(out))
 #' coordinatewise station info (meta data) available on the DWD CDC FTP server
 #'
 #' \code{\link{metaIndex}} distilled to geographic locations.
+#' \code{geoIndexAll} contains all coordinates.
+#' \code{geoIndex} is an aggregated version where stations (of a single ID) with all unique
+#' coordinates less than 900 m apart are aggregated into one location.
+#' Distance is computed with \url{https://github.com/brry/OSMscale/blob/master/R/maxEarthDist.R}
+#' To reduce package dependency, aggregation is done locally in the last section of
+#' \url{https://github.com/brry/rdwd/blob/master/R/meta.R}
 #'
 #' @name geoIndex
+#' @aliases geoIndex geoIndexAll
 #' @docType data
 #' @format data.frame with ca 7k rows for 9 columns:
 #'         \code{id}, \code{name}, \code{state}
 #'         \code{lat}, \code{long}, \code{ele}
 #'         \code{all_elev}, \code{nfiles_coord}, \code{nfiles_id}
 #' @source Deutscher WetterDienst / Climata Data Center  FTP Server
-#' @seealso \code{\link{metaIndex}}, \code{\link{createIndex}}
-#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, June-Nov 2016
+#' @seealso \code{\link{metaIndex}}, \code{\link{createIndex}},
+#'         \code{vignette("mapDWD")}, \url{../doc/mapDWD.html}
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, June-Nov 2016 + Feb 2017
 #' @keywords datasets
 #' @examples
 #'
@@ -151,38 +175,35 @@ return(invisible(out))
 #' # example usages are in ?rdwd
 #'
 data(geoIndex, envir=environment())
+data(geoIndexAll, envir=environment())
 
 
 
-# mapDWD --------------------------------------------------------------
+# rowDisplay ---------------------------------------------------------------------
 
-#' Interactive map of data available on the DWD CDC FTP server
+#' create display character string for leaflet map popup from data.frame rows
 #'
-#' Interactive leaflet map with DWD weather stations.
-#' Created from \code{\link{geoIndex}} in the last section of
-#' \url{https://github.com/brry/rdwd/blob/master/R/meta.R}
+#' @return Vector of characterstrings, one for each row in x.
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Feb 2017
+#' @seealso \code{\link{geoIndex}}
+#' @keywords character
+#' @importFrom berryFunctions removeSpace
+#' @export
 #'
-#' @name mapDWD
-#' @docType data
-#' @format leaflet map
-#' @source Deutscher WetterDienst / Climata Data Center  FTP Server
-#' @seealso \code{\link{geoIndex}}, \code{\link{metaInfo}}
-#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jan 2017
-#' @keywords datasets
-#' @examples
+#' @param x data.frame with colnames
 #'
-#' data(mapDWD)
-#' library(leaflet)
-#' mapDWD
-#' # in functions, you can use rdwd:::mapDWD
-#'
-#' # The first line when clicked on a point can be copied to R for more information
-#'
-data(mapDWD, envir=environment())
+rowDisplay <- function(
+x
+)
+{
+perrow <- function(x) paste0("rdwd::metaInfo(id=",removeSpace(x[1]),")<br>",
+                             paste0(names(x)[-1], ": ", x[-1], collapse="<br>"))
+apply(x, MARGIN=1, perrow)
+}
 
 
 
-# create / update Indexes ------------------------------------------------------
+# update Indexes ---------------------------------------------------------------
 
 if(FALSE){
 # dwdfiles <- indexDWD(sleep=0) # commented out to prevent accidental calling
@@ -190,39 +211,69 @@ if(FALSE){
 # file.rename("DWDdata/INDEX_of_DWD__daily_kl_historical.txt", "DWDdata/INDEX_of_DWD_.txt")
 dwdfiles <- readLines("DWDdata/INDEX_of_DWD_.txt") # 25'631 elements (2016-10-21)
 index <- createIndex(dwdfiles, meta=TRUE, sleep=5)
-fileIndex <- index[[1]]
-metaIndex <- index[[2]]
- geoIndex <- index[[3]]
-
+fileIndex    <- index[[1]]
+metaIndex    <- index[[2]]
+ geoIndexAll <- index[[3]]
 # save and compress:
-save(fileIndex,  file="data/fileIndex.rda")
-tools::resaveRdaFiles("data/fileIndex.rda") #devtools::use_data(fileIndex, internal=TRUE)
-save(metaIndex,  file="data/metaIndex.rda")
-tools::resaveRdaFiles("data/metaIndex.rda")
-save( geoIndex,  file="data/geoIndex.rda")
-tools::resaveRdaFiles("data/geoIndex.rda")
+save(fileIndex,     file="data/fileIndex.rda")
+tools::resaveRdaFiles(   "data/fileIndex.rda") #devtools::use_data(fileIndex, internal=TRUE)
+save(metaIndex,     file="data/metaIndex.rda")
+tools::resaveRdaFiles(   "data/metaIndex.rda")
+save( geoIndexAll,  file="data/geoIndexAll.rda")
+tools::resaveRdaFiles(   "data/geoIndexAll.rda")
 
 # check writing and reading of the files:
 fileIndex2 <- read.table("DWDdata/fileIndex.txt", sep="\t", header=TRUE, colClasses="character")
 stopifnot(all(fileIndex==fileIndex2))
 metaIndex2 <- read.table("DWDdata/metaIndex.txt", sep="\t", header=TRUE, as.is=TRUE)
 stopifnot(all(metaIndex==metaIndex2))
- geoIndex2 <- read.table("DWDdata/geoIndex.txt",  sep="\t", header=TRUE, as.is=TRUE)
-stopifnot(all( geoIndex== geoIndex2))
+ geoIndexAll2 <- read.table("DWDdata/geoIndexAll.txt",  sep="\t", header=TRUE, as.is=TRUE)
+stopifnot(all( geoIndexAll== geoIndexAll2))
+rm(fileIndex2,metaIndex2,geoIndexAll2, index,dwdfiles)
 
 
-# interactive map:
-onerow <- function(x) paste0("metaInfo(id=",removeSpace(x[1]),")<br>",
-                             paste0(names(x)[-1], ": ", x[-1], collapse="<br>"))
-#onerow(geoIndex[1,])
-geoIndex$display <- apply(geoIndex, MARGIN=1, onerow)
 
+# geoIndexAll 2 geoIndex -------------------------------------------------------
+#    data("geoIndexAll")
+
+# compute max distances:
+id <- unique(geoIndexAll$id)
+dist <- pbapply::pbsapply(id, function(i)  # ca 5 secs computing time
+  {
+  g <- geoIndexAll[geoIndexAll$id==i,]
+  if(nrow(g)<2) return(0)
+  OSMscale::maxEarthDist(lat, long, data=g)
+  })
+names(dist) <- id
+
+# Examine distances:
+if(FALSE){
+logHist(dist, breaks=50, main="Max distance between station locations in km")
 library(leaflet)
-mapDWD <- leaflet(data=geoIndex) %>% addTiles() %>%
-             addCircles(~long, ~lat, radius=900, stroke=F)%>%
-             addCircleMarkers(~long, ~lat, popup=~display, stroke=F)
-mapDWD
-#htmlwidgets::saveWidget(mapDWD, file="map.html")
-save(mapDWD,     file="data/mapDWD.rda")
-tools::resaveRdaFiles("data/mapDWD.rda")
+leaflet(data=geoIndexAll[geoIndexAll$id %in% id[dist>2],]) %>%
+        addTiles() %>% addCircleMarkers(~long, ~lat, popup=~display, stroke=F)
+}
+
+# combine stations per ID if closer than 900 m apart (radius of fixed circles):
+geoIndex <- pbapply::pblapply(id, function(i){
+  g <- geoIndexAll[geoIndexAll$id==i,]
+  if(nrow(g)<2) return(g)
+  if(dist[as.character(i)] > 0.9) return(g)
+  keeprow <- which.max(g$nfiles_coord)
+  g$recentfile <- any(g$recentfile)
+  g$ele <- round(sum(g$ele*g$nfiles_coord/g$nfiles_id[1]),2)
+  g$nfiles_coord <- paste(g$nfiles_coord, collapse="+")
+  return(g[keeprow,])
+})
+
+geoIndex <- do.call(rbind, geoIndex)
+geoIndex$all_elev <- NULL
+geoIndex$display <- NULL
+geoIndex$display <- rowDisplay(geoIndex)
+geoIndex$col <- "blue"
+geoIndex$col[!geoIndex$recentfile] <- "red"
+
+save( geoIndex,  file="data/geoIndex.rda")
+tools::resaveRdaFiles("data/geoIndex.rda")
+
 }
