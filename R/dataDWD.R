@@ -12,7 +12,7 @@
 #'         if \code{read=TRUE}, a data.frame of the desired dataset
 #'         (as returned by \code{\link{readDWD}}),
 #'         otherwise the filename as saved on disc
-#'         (may have "_n" appended in name, see \code{\link{fileDWD}}).\cr
+#'         (may have "_n" appended in name, see \code{\link{newFilename}}).\cr
 #'         If length(file)>1, the output is a list of data.frames / vector of filenames.\cr
 #'         The output is always invisible.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jun-Oct 2016
@@ -21,6 +21,7 @@
 #'          see also \code{berryFunctions::\link[berryFunctions]{climateGraph}}
 #' @keywords data file
 #' @importFrom utils tail download.file browseURL
+#' @importFrom berryFunctions newFilename
 #' @export
 #' @examples
 #' \dontrun{ ## requires internet connection
@@ -118,6 +119,12 @@ ntrunc=2,
 if(!is.atomic(file)) stop("file must be a vector, not a ", class(file))
 if(!is.character(file)) stop("file must be char, not ", class(file))
 if(missing(progbar) & length(file)==1) progbar <- FALSE
+if(any(file==""))
+{
+  message(traceCall(1, "", ": "), "Removing ", sum(file==""), " empty element(s) from file vector.")
+  file <- file[file!=""]
+}
+if(length(file)<1) stop("The vector of files to be downloaded is empty.")
 # be safe from accidental vector input:
 dir     <- dir[1]
 progbar <- progbar[1]
@@ -147,13 +154,12 @@ if( any(dontdownload)  )
           berryFunctions::truncMessage(outfile[dontdownload], ntrunc=ntrunc, prefix=""),
           "\nNow downloading ",sum(!dontdownload)," files...")
   }
-outfile <- fileDWD(outfile, quiet=quiet, ignore=dontdownload, ntrunc=ntrunc)
+outfile <- newFilename(outfile, quiet=quiet, ignore=dontdownload, ntrunc=ntrunc)
 # Optional progress bar:
-progbar <- progbar & requireNamespace("pbapply", quietly=TRUE)
 if(progbar) lapply <- pbapply::pblapply
 # ------------------------------------------------------------------------------
 # loop over each filename
-dummy <- lapply(seq_along(file), function(i)
+lapply(seq_along(file), function(i)
   if(!dontdownload[i])
   {
   # Actual file download:
@@ -167,8 +173,9 @@ output <- outfile
 if(read)
   {
   if(progbar) message("Reading ", length(outfile), " file", if(length(outfile)>1)"s", "...")
-  output <- readDWD(file=outfile, dir="", meta=meta, format=format, progbar=progbar)
-  }
+  output <- readDWD(file=outfile, meta=meta, format=format, progbar=progbar)
+  } else
+output <- paste0(dir,"/",output)
 # output:
 return(invisible(output))
 }

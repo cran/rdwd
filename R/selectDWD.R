@@ -18,12 +18,33 @@
 #' }
 #' For case 3 and 4 (\bold{path} given), you can set \code{meta=TRUE}.
 #' Then selectDWD will return the name of the station description file at \bold{path}.
-#' This is why case 3 with \code{meta=FALSE} only returns the data file names (ending in .zip).
+#' This is why case 3 with \code{meta=FALSE} only returns the data file names (ending in .zip).\cr
+#' The following folders in \bold{\code{res/var/per}} notation
+#' (resolution/variable/period) are available at
+#' \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate/}
+#' (and a few more at the \code{res} level).\cr
+#' "<" signifies a split into the folders \code{per} = "recent" and "historical".\cr
+#' "-" signifies that there are no further sub-folders.
+#' \tabular{lll}{
+#' \code{res}=\bold{hourly} \tab | \code{res}=\bold{daily} \tab | \code{res}=\bold{monthly} \cr
+#' \code{var=} \tab \tab \cr
+#'                    \tab | kl <               \tab | kl <          \cr
+#'                    \tab | more_precip <      \tab | more_precip < \cr
+#' air_temperature <  \tab |                    \tab |               \cr
+#' cloudiness <       \tab |                    \tab |               \cr
+#' precipitation <    \tab |                    \tab |               \cr
+#' pressure <         \tab |                    \tab |               \cr
+#' sun <              \tab |                    \tab |               \cr
+#' wind <             \tab |                    \tab |               \cr
+#' soil_temperature < \tab | soil_temperature < \tab |               \cr
+#' solar -            \tab | solar -            \tab |               \cr
+#' }
 #'
 #' @return Character string with file path and name(s) in the format
 #'         "base/res/var/per/filename.zip"
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct 2016
-#' @seealso \code{\link{dataDWD}}, \url{../doc/mapDWD.html}, \code{vignette("mapDWD", package="rdwd")}
+#' @seealso \code{\link{dataDWD}}, \code{\link{metaIndex}}, \url{../doc/mapDWD.html},
+#'          \code{vignette("mapDWD", package="rdwd")}
 #' @keywords file
 #' @importFrom berryFunctions truncMessage traceCall
 #' @export
@@ -85,9 +106,9 @@
 #'              Must be the same \code{base} used to create \code{findex}.
 #'              DEFAULT: \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
 #' @param res   Char: temporal \bold{res}olution available at \code{base}, usually one of
-#'              \code{c("hourly","daily","monthly")}, see \code{\link{rdwd}}.
+#'              \code{c("hourly","daily","monthly")}, see section 'Description' above.
 #'              \code{res/var/per} together form the \bold{path}. DEFAULT: ""
-#' @param var   Char: weather \bold{var}iable of interest, see \code{\link{rdwd}}. Usually one of
+#' @param var   Char: weather \bold{var}iable of interest. Usually one of
 #'              \code{c("air_temperature", "cloudiness", "precipitation",
 #'                      "pressure", "sun", "wind")} (only in hourly),
 #'              \code{c("soil_temperature", "solar")} (in hourly and daily), or
@@ -101,19 +122,21 @@
 #'              \code{per} is set to "" if var=="solar". DEFAULT: ""
 #' @param findex Single object: Index used to select filename, as returned by
 #'              \code{\link{createIndex}}.To use a current / custom index, use
-#'              \code{myIndex <- createIndex(indexDWD("/daily/solar"))}
+#'              \code{myIndex <- createIndex(indexFTP("/daily/solar"))}
 #'              (with desired path, of course). DEFAULT: \code{rdwd:::\link{fileIndex}}
 #' @param current Single logical for case 3/4 with given \code{path}: instead of
 #'              \code{findex}, use a list of the currently available files at
-#'              base/res/var/per? This will call \code{\link{indexDWD}}, thus
+#'              base/res/var/per? This will call \code{\link{indexFTP}}, thus
 #'              requires availability of the \code{RCurl} package.
 #'              DEFAULT: FALSE
 #' @param meta  Logical: return metadata txt file name instead of climate data zip file?
-#'              Relevant only in case 4 (path and id given). DEFAULT: FALSE
+#'              Relevant only in case 4 (path and id given).
+#'              See \code{\link{metaIndex}} for a compilation of all metaData files.
+#'              DEFAULT: FALSE
 #' @param outvec Single logical: if \bold{path} or \bold{ID} length > 1,
 #'              instead of a list, return a vector? (via \code{\link{unlist}}).
 #'              DEFAULT: FALSE
-#' @param \dots Further arguments passed to \code{\link{indexDWD}} if \code{current=TRUE},
+#' @param \dots Further arguments passed to \code{\link{indexFTP}} if \code{current=TRUE},
 #'              like dir, quiet
 #'
 selectDWD <- function(
@@ -134,7 +157,7 @@ outvec=FALSE,
 {
 # unused arguments:
 unused <- names(list(...))
-unused <- unused[!unused %in% names(formals(indexDWD))]
+unused <- unused[!unused %in% names(formals(indexFTP))]
 if(length(unused)>0) warning("unused arguments in ", berryFunctions::traceCall(1,"",""), ": ",
                              toString(unused), call.=FALSE)
 # Input checks and processing:
@@ -166,20 +189,20 @@ per[substr(per,1,1)=="h"] <- "historical"
 per[substr(per,1,1)=="r"] <- "recent"
 # solar per to ""
 per[var=="solar"] <- ""
+# check ids for accidental letters:
+idlett <- grepl("[A-Za-z]", id)
+if(any(idlett)) stop(traceCall(1, "in ", ": "), "id may not contain letters: ",
+                     toString(id[idlett]), call.=FALSE)
 # update file index:
 if(current)
   {
   uniquepaths <- unique(paste0("/",res,"/",var,"/",per))
   uniquepaths <- uniquepaths[uniquepaths!="///"]
-  if(length(uniquepaths)<1) stop("in rdwd::selectDWD: current=TRUE, but no valid ",
-                                 "paths available.", call.=FALSE)
-  findex <- createIndex(indexDWD(uniquepaths, ...), filename="")
+  if(length(uniquepaths)<1) stop(traceCall(1, "in ", ": "),
+                    "current=TRUE, but no valid paths available.", call.=FALSE)
+  findex <- createIndex(indexFTP(uniquepaths, ...), fname="")
   findexname <- "currentIndex"
   }
-# check ids for accidental letters:
-idlett <- grepl("[A-Za-z]", id)
-if(any(idlett)) stop("in rdwd::selectDWD: id may not contain letters: ",
-                     toString(id[idlett]), call.=FALSE)
 # convert ID to integer:
 id <- suppressWarnings(as.integer(id))
 findex$id <- suppressWarnings(as.integer(findex$id))
@@ -198,7 +221,7 @@ givenpath <- res[i]!="" & var[i]!="" # ignore per, because of var=solar possibil
 # base + warning
 if(!givenid & !givenpath)
   {
-  warning("in rdwd::selectDWD: Neither station ID nor FTP folder is given.", call.=FALSE)
+  warning(traceCall(3, "", ": "), "neither station ID nor FTP folder is given.", call.=FALSE)
   # call.=FALSE to avoid uninformative  Error in FUN(X[[i]], ...) :
   return(base)
   }
@@ -206,14 +229,15 @@ if(!givenid & !givenpath)
 # all file names for station ID, regardless of path
 if(givenid & !givenpath)
   {
-  if(meta[i]) warning("in rdwd::selectDWD: meta is ignored if id is given, but path is not given.", call.=FALSE)
+  if(meta[i]) warning(traceCall(3, "", ": "),
+          "meta is ignored if id is given, but path is not given.", call.=FALSE)
   filename <- findex[findex$id %in% id[i], "path"]
   filename <- filename[!is.na(filename)]
   # check output length
-  if(length(filename)<1) warning("in rdwd::selectDWD: in file index '", findexname,
+  if(length(filename)<1) warning(traceCall(3, "", ": "), "in file index '", findexname,
                                  "', no filename could be detected with ID ",
                                  id[i], ".", call.=FALSE)
-  if(length(filename)>1) warning("in rdwd::selectDWD: in file index '", findexname,
+  if(length(filename)>1) warning(traceCall(3, "", ": "), "in file index '", findexname,
                                  "', there are ", length(filename), " files with ID ",
                                  id[i], ".", call.=FALSE)
   return(   paste0(base, filename)   )
@@ -221,7 +245,7 @@ if(givenid & !givenpath)
 #
 # Case 3 and 4 (path given) - path existence check ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 path <- paste0("/",res[i],"/",var[i],"/",per[i])
-if(all(!grepl(path, findex$path))) warning("in rdwd::selectDWD: According to file index '",
+if(all(!grepl(path, findex$path))) warning(traceCall(3, "", ": "), "according to file index '",
        findexname, "', the path '", path, "' doesn't exist.", call.=FALSE)
 # select entries from file index:
 sel <- res[i]==findex$res & var[i]==findex$var & per[i]==findex$per
@@ -233,7 +257,7 @@ if(meta[i])
   sel <- sel & substr(findex$path, nchar(findex$path)-3, 1e4)==".txt"
   sel <- sel & grepl("Beschreibung", findex$path)
   # checks:
-  if(sum(sel)==0) warning("in rdwd::selectDWD: According to file index '",findexname,
+  if(sum(sel)==0) warning(traceCall(3, "", ": "), "according to file index '",findexname,
                      "', there is no description file in '", path, "'.", call.=FALSE)
   filename <- findex[sel,"path"]
   return(   paste0(base, filename)   )
@@ -244,7 +268,7 @@ if(!givenid & givenpath & !meta[i])
   {
   sel <- sel & substr(findex$path, nchar(findex$path)-3, 1e4)==".zip"
   filename <- findex[sel,"path"]
-  if(length(filename)<1) warning("in rdwd::selectDWD: According to file index '",
+  if(length(filename)<1) warning(traceCall(3, "", ": "), "according to file index '",
                                  findexname, "', there is no file in '", path,
                                  "' with ID ", id[i], ".", call.=FALSE)
   return(   paste0(base, filename)   )
@@ -254,11 +278,11 @@ if(!givenid & givenpath & !meta[i])
 if(givenid & givenpath & !meta[i])
   {
   sel <- sel & findex$id %in% id[i]
-  if(sum(sel)==0) warning("in rdwd::selectDWD: According to file index '",findexname,
+  if(sum(sel)==0) warning(traceCall(3, "", ": "), "according to file index '",findexname,
                           "', there is no file in '", path, "' with ID ",
                           id[i], ".", call.=FALSE)
   filename <- findex[sel,"path"]
-  if(length(filename)>1) warning("in rdwd::selectDWD: Several files (",
+  if(length(filename)>1) warning(traceCall(3, "", ": "), "several files (",
                                  length(filename),") were selected:",
                                  berryFunctions::truncMessage(filename, prefix=""),
                                  call.=FALSE)

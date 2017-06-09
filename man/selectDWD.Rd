@@ -30,10 +30,10 @@ Must be the same \code{base} used to create \code{findex}.
 DEFAULT: \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}}
 
 \item{res}{Char: temporal \bold{res}olution available at \code{base}, usually one of
-\code{c("hourly","daily","monthly")}, see \code{\link{rdwd}}.
+\code{c("hourly","daily","monthly")}, see section 'Description' above.
 \code{res/var/per} together form the \bold{path}. DEFAULT: ""}
 
-\item{var}{Char: weather \bold{var}iable of interest, see \code{\link{rdwd}}. Usually one of
+\item{var}{Char: weather \bold{var}iable of interest. Usually one of
 \code{c("air_temperature", "cloudiness", "precipitation",
         "pressure", "sun", "wind")} (only in hourly),
 \code{c("soil_temperature", "solar")} (in hourly and daily), or
@@ -49,23 +49,25 @@ use \code{per="hr"} or \code{per="rh"} (and \code{outvec=TRUE}).
 
 \item{findex}{Single object: Index used to select filename, as returned by
 \code{\link{createIndex}}.To use a current / custom index, use
-\code{myIndex <- createIndex(indexDWD("/daily/solar"))}
+\code{myIndex <- createIndex(indexFTP("/daily/solar"))}
 (with desired path, of course). DEFAULT: \code{rdwd:::\link{fileIndex}}}
 
 \item{current}{Single logical for case 3/4 with given \code{path}: instead of
 \code{findex}, use a list of the currently available files at
-base/res/var/per? This will call \code{\link{indexDWD}}, thus
+base/res/var/per? This will call \code{\link{indexFTP}}, thus
 requires availability of the \code{RCurl} package.
 DEFAULT: FALSE}
 
 \item{meta}{Logical: return metadata txt file name instead of climate data zip file?
-Relevant only in case 4 (path and id given). DEFAULT: FALSE}
+Relevant only in case 4 (path and id given).
+See \code{\link{metaIndex}} for a compilation of all metaData files.
+DEFAULT: FALSE}
 
 \item{outvec}{Single logical: if \bold{path} or \bold{ID} length > 1,
 instead of a list, return a vector? (via \code{\link{unlist}}).
 DEFAULT: FALSE}
 
-\item{\dots}{Further arguments passed to \code{\link{indexDWD}} if \code{current=TRUE},
+\item{\dots}{Further arguments passed to \code{\link{indexFTP}} if \code{current=TRUE},
 like dir, quiet}
 }
 \value{
@@ -91,7 +93,27 @@ case \tab |  \bold{id} \tab |  \bold{path} \tab | output \cr
 }
 For case 3 and 4 (\bold{path} given), you can set \code{meta=TRUE}.
 Then selectDWD will return the name of the station description file at \bold{path}.
-This is why case 3 with \code{meta=FALSE} only returns the data file names (ending in .zip).
+This is why case 3 with \code{meta=FALSE} only returns the data file names (ending in .zip).\cr
+The following folders in \bold{\code{res/var/per}} notation
+(resolution/variable/period) are available at
+\url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate/}
+(and a few more at the \code{res} level).\cr
+"<" signifies a split into the folders \code{per} = "recent" and "historical".\cr
+"-" signifies that there are no further sub-folders.
+\tabular{lll}{
+\code{res}=\bold{hourly} \tab | \code{res}=\bold{daily} \tab | \code{res}=\bold{monthly} \cr
+\code{var=} \tab \tab \cr
+                   \tab | kl <               \tab | kl <          \cr
+                   \tab | more_precip <      \tab | more_precip < \cr
+air_temperature <  \tab |                    \tab |               \cr
+cloudiness <       \tab |                    \tab |               \cr
+precipitation <    \tab |                    \tab |               \cr
+pressure <         \tab |                    \tab |               \cr
+sun <              \tab |                    \tab |               \cr
+wind <             \tab |                    \tab |               \cr
+soil_temperature < \tab | soil_temperature < \tab |               \cr
+solar -            \tab | solar -            \tab |               \cr
+}
 }
 \examples{
 # Give weather station name (must be existing in metaIndex):
@@ -139,7 +161,8 @@ berryFunctions::is.error(  selectDWD(id="", current=TRUE) , tell=TRUE, force=TRU
 
 }
 \seealso{
-\code{\link{dataDWD}}, \url{../doc/mapDWD.html}, \code{vignette("mapDWD", package="rdwd")}
+\code{\link{dataDWD}}, \code{\link{metaIndex}}, \url{../doc/mapDWD.html},
+         \code{vignette("mapDWD", package="rdwd")}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Oct 2016

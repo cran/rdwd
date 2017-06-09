@@ -4,20 +4,25 @@
 \alias{readDWD}
 \title{Process data from the DWD CDC FTP Server}
 \usage{
-readDWD(file, dir = "DWDdata", meta = substr(file, nchar(file) - 3, 10000)
-  == ".txt", format = NA, tz = "GMT", progbar = TRUE)
+readDWD(file, meta = substr(file, nchar(file) - 3, 10000) == ".txt",
+  fread = requireNamespace("data.table", quietly = TRUE), html = FALSE,
+  format = NA, tz = "GMT", progbar = TRUE)
 }
 \arguments{
 \item{file}{Char (vector): name(s) of the file(s) downloaded with \code{\link{dataDWD}},
-e.g. "tageswerte_KL_02575_akt.zip" or
-"RR_Stundenwerte_Beschreibung_Stationen.txt"}
-
-\item{dir}{Char: directory name where to read the file. Use \code{"."} or \code{""}
-if \code{file} already includes a (relative or absolute) path.
-DEFAULT: "DWDdata" at current \code{\link{getwd}()}}
+e.g. "DWDdata/tageswerte_KL_02575_akt.zip" or
+"DWDdata/RR_Stundenwerte_Beschreibung_Stationen.txt"}
 
 \item{meta}{Logical (vector): is the \code{file} a meta file?
 DEFAULT: TRUE for each file ending in ".txt"}
+
+\item{fread}{Logical: read faster with \code{data.table::\link[data.table]{fread}}?
+For 30 daily/kl/hist files, 7 instead of 10 seconds.
+DEFAULT: TRUE if data.table is available.}
+
+\item{html}{Logical: read the html file instead of actual data?
+Requires XML to be installed. Experimental: use at own risk!
+DEFAULT: FALSE}
 
 \item{format}{Char (vector): if \code{meta=FALSE}: Format passed to
 \code{\link{as.POSIXct}} (see \code{\link{strptime}})
@@ -41,9 +46,11 @@ Invisible data.frame of the desired dataset, or a list of data.frames
 \description{
 Read climate (meta) data that was downloaded with \code{\link{dataDWD}}.
 The file is read, processed and returned as a data.frame.\cr
-If \code{meta=TRUE}: column widths for \code{\link{read.fwf}} are computed internally.\cr
 \code{file} can be a vector with several filenames. The arguments \code{meta}
-and \code{format} can also be a vecor and will be recycled to the length of \code{file}.
+and \code{format} can also be a vecor and will be recycled to the length of \code{file}.\cr
+If \code{meta=TRUE}, column widths for \code{\link{read.fwf}} are computed internally.
+If needed, readDWD tries to set the locale to German (to handle Umlaute correctly).
+They can then be processed with \code{dd$Stations_id <- berryFunctions::convertUmlaut(dd$Stations_id)}.
 }
 \examples{
 # see dataDWD

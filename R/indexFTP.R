@@ -21,36 +21,46 @@
 #' @keywords file
 #' @importFrom stats runif
 #' @importFrom utils write.table
+#' @importFrom berryFunctions removeSpace traceCall newFilename
 #' @export
 #' @examples
 #' \dontrun{ ## Needs internet connection
-#' sol <- indexDWD(folder="/daily/solar")
+#' sol <- indexFTP(folder="/daily/solar")
 #' head(sol)
 #'
-#' mon <- indexDWD(folder="/monthly/kl", verbose=TRUE)
+#' mon <- indexFTP(folder="/monthly/kl", verbose=TRUE)
 #' }
 #'
-#' @param folder Folder to be indexed recursively, e.g. "/hourly/wind/".
-#'               DEFAULT: all folders at \code{base} in current \code{\link{fileIndex}}
-#' @param base Main directory of DWD ftp server, defaulting to observed climatic records.
-#'             DEFAULT: \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
-#' @param sleep If not 0, a random number of seconds between 0 and \code{sleep}
-#'              is passed to \code{\link{Sys.sleep}} after each read folder
-#'              to avoid getting kicked off the FTP-Server. DEFAULT: 0
-#' @param dir Writeable directory name where to save the downloaded file.
-#'            Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}
-#' @param quiet Suppress message about directory and failed
-#'              \code{RCurl::\link[RCurl]{getURL}}? DEFAULT: FALSE
+#' @param folder  Folder(s) to be indexed recursively, e.g. "/hourly/wind/".
+#'                If it is "currentfindex" (the default) and \code{base} is the default,
+#'                it is changed to all folders in current \code{\link{fileIndex}}:
+#'                \code{unique(dirname(fileIndex$path))}. DEFAULT: "currentfindex"
+#' @param base    Main directory of DWD ftp server, defaulting to observed climatic records.
+#'                DEFAULT: \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
+#' @param sleep   If not 0, a random number of seconds between 0 and \code{sleep}
+#'                is passed to \code{\link{Sys.sleep}} after each read folder
+#'                to avoid getting kicked off the FTP-Server. DEFAULT: 0
+#' @param dir     Writeable directory name where to save the downloaded file.
+#'                Created if not existent.
+#'                DEFAULT: "DWDdata" at current \code{\link{getwd}()}
+#' @param filename Character: Part of output filename. "INDEX_of_DWD_" is prepended,
+#'                "/" replaced with "_", ".txt" appended. DEFAULT: folder[1]
+#' @param overwrite Logical: Overwrite existing file? If not, "_n" is added to the
+#'                filename, see \code{berryFunctions::\link[berryFunctions]{newFilename}}.
+#'                DEFAULT: FALSE
+#' @param quiet   Suppress progbars and message about directory/files? DEFAULT: FALSE
 #' @param progbar Logical: present a progress bar in each level?
 #'                Only works if the R package pbapply is available. DEFAULT: TRUE
 #' @param verbose Logical: write a lot of messages from \code{RCurl::\link[RCurl]{getURL}}?
 #'                DEFAULT: FALSE (usually, you dont need all the curl information)
 #'
-indexDWD <- function(
-folder=unique(dirname(fileIndex$path)),
+indexFTP <- function(
+folder="currentfindex",
 base="ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate",
 sleep=0,
 dir="DWDdata",
+filename=folder[1],
+overwrite=FALSE,
 quiet=FALSE,
 progbar=!quiet,
 verbose=FALSE
@@ -58,8 +68,11 @@ verbose=FALSE
 {
 # Check if RCurl is available:
 if(!requireNamespace("RCurl", quietly=TRUE))
-  stop("The R package 'RCurl' is not available. rdwd::indexDWD can not obtain file list.\n",
+  stop("The R package 'RCurl' is not available. rdwd::indexFTP can not obtain file list.\n",
        "install.packages('RCurl')       to enable this.")
+# change folder:
+if(all(folder=="currentfindex") & base=="ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate")
+   folder <- unique(dirname(fileIndex$path))
 # Progress bar?
 progbar <- progbar & requireNamespace("pbapply", quietly=TRUE)
 if(progbar) lapply <- pbapply::pblapply
@@ -81,10 +94,18 @@ while(any(!isfile))
                        verbose=verbose, ftp.use.epsv=TRUE, dirlistonly=TRUE), silent=TRUE)
     if(inherits(p, "try-error"))
       {
-      if(!quiet) warning("rdwd::indexDWD: RCurl::getURL failed for '", path,
-                         "/' - ", p, call.=FALSE, immediate.=TRUE) # strsplit(p, "\n")[[1]][2]
+      # Prepare warning or note message text:
+      p <- gsub("Error in function (type, msg, asError = TRUE)  : ", "", p, fixed=TRUE)
+      p <- removeSpace(gsub("\n", "", p))
+      if(grepl("Could not resolve host", p)) p <- paste0(p,
+                       "\nThis may mean you are not connected to the internet.")
+      file_nodot <- !grepl(pattern=".", x=path, fixed=TRUE)
+      file_nodot <- file_nodot && p=="Server denied you to change to the given directory"
+      msg <- paste0(traceCall(3, "", ": "), "RCurl::getURL failed for '", path, "/' - ", p)
+      if(file_nodot) msg <- paste0(msg, "\nIf this is a file, not a folder, ignore this message.")
+      # actually warn / notify:
+      if(file_nodot) message("Note in ", msg) else warning(msg, call.=FALSE)
       assign("isfile", 7777, inherits=TRUE) # to get out of the while loop
-      # if(grepl("Access denied: 530", p)) # stoppp now always set to true after failure
       assign("stoppp", TRUE, inherits=TRUE) # to get out of the lapply loop
       return(path)
       }
@@ -104,8 +125,8 @@ f <- sort(unlist(f, use.names=FALSE))
 # write output:
 owd <- dirDWD(dir, quiet=quiet)
 on.exit(setwd(owd))
-outfile <- paste0("INDEX_of_DWD_", gsub("/","_",folder[1]),".txt")
-outfile <- fileDWD(outfile, quiet=quiet)
+outfile <- paste0("INDEX_of_DWD_", gsub("/","_",filename),".txt")
+outfile <- newFilename(outfile, ignore=overwrite, pre="", mid="", quiet=quiet)
 write.table(f, file=outfile, row.names=FALSE, col.names=FALSE, quote=FALSE)
 # return output:
 return(f)
