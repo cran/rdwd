@@ -1,5 +1,5 @@
 #' Create file and meta index of the DWD CDC FTP Server
-#'
+#' 
 #' This is mainly an internal function.
 #' Create data.frames out of the vector index returned by \code{\link{indexFTP}}.
 #' For \code{\link{fileIndex}} (the first output element) \code{createIndex}
@@ -8,15 +8,16 @@
 #' created. They combine all Beschreibung files into a single data.frame.\cr
 #' If you create your own index as suggested in selectDWD (argument \code{findex}),
 #' you can read the produced file as shown in the example section.
-#'
+#' 
 #' @return invisible data.frame (or if meta=TRUE, list with two data.frames)
 #' with a number of columns inferred from the paths. Each is also written to disc.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct-Nov 2016, June 2017
 #' @seealso \code{\link{indexFTP}}, \code{\link{fileIndex}}, \code{\link{metaIndex}}, \code{\link{selectDWD}}
 #' @keywords manip
-#' @importFrom berryFunctions l2df convertUmlaut newFilename sortDF
+#' @importFrom berryFunctions l2df convertUmlaut newFilename sortDF traceCall
 #' @importFrom utils write.table
 #' @importFrom pbapply pbsapply pblapply
+#' @importFrom graphics abline
 #' @export
 #' @examples
 #' \dontrun{ # Not tested with R CMD check because of file writing
@@ -28,19 +29,19 @@
 #' ind2 <- createIndex(c(link,link2,link3), dir=tempdir(), meta=TRUE)
 #' lapply(ind2, head)
 #' }
-#'
+#' 
 #' # For real usage, see last part of
 #' if(interactive())
 #' browseURL("https://github.com/brry/rdwd/blob/master/R/rdwd-package.R")
 #' # where the Indexes are added to the package
-#'
+#' 
 #' # Read results in later:
 #' \dontrun{ ## files normally not yet available:
 #' fileIndex2 <- read.table("DWDdata/fileIndex.txt", sep="\t", header=TRUE,
 #'                          colClasses="character")
 #' metaIndex2 <- read.table("DWDdata/metaIndex.txt", sep="\t", header=TRUE, as.is=TRUE)
 #' }
-#'
+#' 
 #' @param paths Char: vector of DWD paths returned by \code{\link{indexFTP}} called
 #'              with the same \code{base} value as this function
 #' @param base  Main directory of DWD ftp server, defaulting to observed climatic records.
@@ -53,7 +54,7 @@
 #'              Uses \code{\link{dataDWD}} to download files if not present.
 #'              DEFAULT: FALSE
 #' @param metadir Char: Directory (subfolder of \code{dir}) where original
-#'              description files are downloaded to if meta=TRUE. vPassed to
+#'              description files are downloaded to if meta=TRUE. Passed to
 #'              \code{\link{dataDWD}}. "" to write in \code{dir}. DEFAULT: "meta"
 #' @param mname Char: Name of file in \code{dir} (not \code{metadir}) in which to
 #'              write \code{\link{metaIndex}}.
@@ -61,7 +62,7 @@
 #' @param gname Filename for \code{\link{geoIndex}}. DEFAULT: "geoIndex.txt"
 #' @param quiet Logical: Suppress messages about progress and filenames? DEFAULT: FALSE
 #' @param \dots Further arguments passed to \code{\link{dataDWD}} for the meta part.
-#'
+#' 
 createIndex <- function(
 paths,
 base="ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate",
@@ -157,7 +158,7 @@ sapply(2:length(cnames), function(i) if(!all(cnames[[i]] == cnames[[1]]))
 #
 # merge:
 if(!quiet) messaget("Merging meta files...")
-metaIndex <- Reduce(function(...) merge(..., all=T), metas)
+metaIndex <- Reduce(function(...) merge(..., all=TRUE), metas)
 if(!quiet) messaget("Processing meta files...")
 metaIndex$Stationsname <- berryFunctions::convertUmlaut(metaIndex$Stationsname)
 metaIndex$Bundesland   <- berryFunctions::convertUmlaut(metaIndex$Bundesland)

@@ -13,7 +13,7 @@
 # rdwd-package ----
 
 #' Download Climate Data from DWD (German Weather Service)
-#'
+#' 
 #' Select weather data from the DWD (Deutscher Wetterdienst) with
 #' \code{\link{selectDWD}} or \code{\link{nearbyStations}}. \cr
 #' Download and process data sets with \code{\link{dataDWD}} and \code{\link{readDWD}}.\cr
@@ -21,7 +21,7 @@
 #' \code{\link{findID}} (which uses \code{\link{metaIndex}}).\cr
 #' The Index objects are created with \code{\link{indexFTP}} and \code{\link{createIndex}}.\cr
 #' For an introduction to the package, see the \href{../doc/rdwd.html}{main vignette}.
-#'
+#' 
 #' @name rdwd
 #' @aliases rdwd-package rdwd
 #' @docType package
@@ -29,7 +29,8 @@
 #' @keywords package documentation
 #' @seealso USA data: \href{https://www.rdocumentation.org/packages/countyweather}{countyweather},
 #'          \href{https://www.rdocumentation.org/packages/rnoaa}{rnoaa}\cr
-#'          World data: \href{https://ropensci.org/blog/blog/2017/04/04/gsodr}{Global Surface Summary of the Day}
+#'          World data: \href{https://ropensci.org/blog/blog/2017/04/04/gsodr}{Global Surface Summary of the Day}\cr
+#'          Durch data: \url{https://github.com/bvhest/KNMIr}\cr
 #' @section Searchability Terms:
 #' Weather Data Germany download with R, Climate Data Germany\cr
 #' Deutscher Wetterdienst R Daten download Klimastationen\cr
@@ -41,9 +42,9 @@ NULL
 # release_questions ----
 
 #' Reminders when using devtools::release
-#'
+#' 
 #' Reminders when using devtools::release. Code is in R/rdwd-package.R
-#'
+#' 
 #' @keywords internal
 
 release_questions <- function() {
@@ -57,7 +58,7 @@ release_questions <- function() {
 # fileIndex, metaIndex, geoIndex ----
 
 #' Indexes of files and metadata on the DWD CDC FTP server
-#'
+#' 
 #' Created with \code{\link{createIndex}} in the last section of
 #' \url{https://github.com/brry/rdwd/blob/master/R/rdwd-package.R}
 #' In functions, you can access them with \code{rdwd:::fileIndex} etc.\cr
@@ -66,7 +67,7 @@ release_questions <- function() {
 #' \bold{metaIndex}: A data.frame with the contents of all the station description files
 #' (..._Beschreibung_Stationen.txt) in the folders hourly, daily and monthly at \code{base}.\cr
 #' \bold{geoIndex}: \code{metaIndex} distilled to geographic locations.
-#'
+#' 
 #' @name index
 #' @aliases fileIndex metaIndex geoIndex
 #' @docType data
@@ -81,12 +82,13 @@ release_questions <- function() {
 #'         res, var, per, hasfile} \cr
 #' \bold{geoIndex}: data.frame with ca 6k rows for 11 columns:\cr
 #'         \code{id, name, state, lat, lon, ele, nfiles, nonpublic, recentfile, display, col}
-#' @source Deutscher WetterDienst / Climata Data Center  FTP Server
+#' @source Deutscher WetterDienst / Climate Data Center  FTP Server
 #' @seealso \code{\link{createIndex}}, \code{\link{indexFTP}}, \code{\link{selectDWD}},
 #'          \code{\link{findID}}, \code{\link{metaInfo}},
 #'          \href{../doc/mapDWD.html}{\code{vignette("mapDWD")}}
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, June-Nov 2016, June 2017
 #' @keywords datasets
+#' @importFrom utils data
 #' @examples
 #' data(fileIndex)
 #' data(metaIndex)
@@ -94,11 +96,11 @@ release_questions <- function() {
 #' head(fileIndex)
 #' head(metaIndex)
 #' head(geoIndex)
-#'
+#' 
 #' # in functions, you can use head(rdwd:::fileIndex) etc, but I don't export them
 #' # because Hadley says 'Never @export a data set' in
 #' # browseURL("http://r-pkgs.had.co.nz/data.html#data-data")
-#'
+#' 
 data(fileIndex, envir=environment())
 data(metaIndex, envir=environment())
 data(geoIndex, envir=environment())
@@ -110,7 +112,7 @@ data(geoIndex, envir=environment())
 # metaInfo ---------------------------------------------------------------------
 
 #' Information for a station ID on the DWD CDC FTP server
-#'
+#' 
 #' @return invisible data.frame. Also \code{\link{print}s} the output nicely formatted.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Nov 2016
 #' @seealso \code{\link{metaIndex}}
@@ -119,10 +121,10 @@ data(geoIndex, envir=environment())
 #' @export
 #' @examples
 #' metaInfo(2849)
-#'
+#' 
 #' @param id Station ID (integer number or convertible to one)
 #' @param hasfileonly Logical: Only show entries that have files? DEFAULT: TRUE
-#'
+#' 
 metaInfo <- function(
   id,
   hasfileonly=TRUE
@@ -182,19 +184,19 @@ return(invisible(out))
 # rowDisplay ---------------------------------------------------------------------
 
 #' Create leaflet map popup from data.frame rows
-#'
+#' 
 #' Create display character string for leaflet map popup from data.frame rows.
 #' This function is not exported, as it is only internally useful.
 #' A generic version is available in \code{berryFunctions::\link[berryFunctions]{popleaf}}.
-#'
-#' @return Vector of characterstrings, one for each row in x.
+#' 
+#' @return Vector of character strings, one for each row in x.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Feb 2017
 #' @seealso \code{\link{geoIndex}}
 #' @keywords character
 #' @importFrom berryFunctions removeSpace
-#'
+#' 
 #' @param x data.frame with colnames
-#'
+#' 
 rowDisplay <- function(
 x
 )

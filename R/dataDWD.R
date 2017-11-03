@@ -3,12 +3,12 @@
 # Weather Data Germany download with R, Climate Data Germany
 #
 #' Download data from the DWD CDC FTP Server
-#'
+#' 
 #' Get climate data from the German Weather Service (DWD) FTP-server.
 #' The desired .zip (or .txt) dataset is downloaded into \code{dir}.
 #' If \code{read=TRUE}, it is also read, processed and returned as a data.frame.
-#'
-#' @return Presuming downloading and processing were successfull:
+#' 
+#' @return Presuming downloading and processing were successful:
 #'         if \code{read=TRUE}, a data.frame of the desired dataset
 #'         (as returned by \code{\link{readDWD}}),
 #'         otherwise the filename as saved on disc
@@ -21,7 +21,9 @@
 #'          see also \code{berryFunctions::\link[berryFunctions]{climateGraph}}
 #' @keywords data file
 #' @importFrom utils tail download.file browseURL
-#' @importFrom berryFunctions newFilename
+#' @importFrom berryFunctions newFilename traceCall truncMessage
+#' @importFrom pbapply pblapply
+#' @importFrom stats runif
 #' @export
 #' @examples
 #' \dontrun{ ## requires internet connection
@@ -30,7 +32,7 @@
 #' # actually download and read files
 #' prec <- dataDWD(link, dir="DWDdata") # the default dir
 #' fname <- dataDWD(link, read=FALSE) # filename, no second download (unless force=TRUE)
-#'
+#' 
 #' # current and historical files:
 #' link <- selectDWD("Potsdam", res="daily", var="kl", per="hr", outvec=TRUE); link
 #' potsdam <- dataDWD(link)
@@ -46,7 +48,7 @@
 #' View(err) # WINDGESCHWINDIGKEIT (wind speed) has been slightly changed
 #' # Keep only historical dataset:
 #' potsdam <- potsdam[!duplicated(potsdam$MESS_DATUM),]
-#'
+#' 
 #' # several files:
 #' link <- c(link, selectDWD("Potsdam", res="daily", var="kl", per="hr", outvec=TRUE))
 #' clim <- dataDWD(link)
@@ -54,32 +56,34 @@
 #' clim <- readDWD(fname)
 #' unzip(zipfile=paste0("DWDdata/",fname[1]), exdir="DWDdata/Testunzip")
 #' # There's quite some important meta information there!
-#'
+#' 
 #' plot(prec$MESS_DATUM, prec$NIEDERSCHLAGSHOEHE, main="DWD hourly rain Kupferzell", col="blue",
 #'      xaxt="n", las=1, type="l", xlab="Date", ylab="Hourly rainfall  [mm]")
 #' monthAxis(1, ym=T)
-#'
+#' 
 #' d <- dataDWD(selectDWD(id="05692", res="daily", var="kl", per="recent"))
 #' # writes into the same folder (dir="DWDdata")
-#'
+#' 
 #' folder <- dataDWD(link, browse=T)
 #' folder
-#'
+#' 
 #' # With many files, use sleep
 #' links <- selectDWD(res="daily", var="solar", meta=FALSE)
 #' sol <- dataDWD(links, sleep=20) # random waiting time after download (0 to 20 secs)
-#'
+#' 
 #' # Real life example with data completeness check etc:
 #' browseURL("http://github.com/brry/prectemp/blob/master/Code_example.R")
-#'
+#' 
 #' }
-#'
+#' 
 #' @param file   Char (vector): complete file URL(s) (including base and filename.zip) as returned by
 #'               \code{\link{selectDWD}}. Can be a vector with several filenames.
 #' @param dir    Char: Writeable directory name where to save the downloaded file.
 #'               Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}
-#' @param force  Logical: always download, even if the file already exists in \code{dir}?
+#' @param force  Logical (vector): always download, even if the file already exists in \code{dir}?
 #'               If FALSE, it is still read (or name returned). DEFAULT: FALSE
+#' @param overwrite Logical (vector): if force=TRUE, overwrite the existing file
+#'               rather than append "_1"/"_2" etc to the filename? DEFAULT: FALSE
 #' @param sleep  Number. If not 0, a random number of seconds between 0 and
 #'               \code{sleep} is passed to \code{\link{Sys.sleep}} after each download
 #'               to avoid getting kicked off the FTP-Server. DEFAULT: 0
@@ -95,6 +99,7 @@
 #'               only download is performed and the filename(s) returned. DEFAULT: TRUE
 #' @param meta   Logical (vector): is the \code{file} a meta file? Passed to
 #'               \code{\link{readDWD}}. DEFAULT: TRUE for each file ending in ".txt"
+#' @param fread  Fast reading? See \code{\link{readDWD}}. DEFAULT: FALSE
 #' @param format Char (vector): format used in \code{\link{strptime}} to convert date/time column,
 #'               see \code{\link{readDWD}}. DEFAULT: NA
 #' @param ntrunc Single integer: number of filenames printed in messages
@@ -105,12 +110,14 @@ dataDWD <- function(
 file,
 dir="DWDdata",
 force=FALSE,
+overwrite=FALSE,
 sleep=0,
 quiet=FALSE,
 progbar=!quiet,
 browse=FALSE,
 read=TRUE,
 meta=substr(file, nchar(file)-3, 1e4)==".txt",
+fread=FALSE,
 format=NA,
 ntrunc=2,
 ...
@@ -147,14 +154,16 @@ on.exit(setwd(owd))
 outfile <- gsub("ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate/", "", file)
 outfile <- gsub("/", "_", outfile)
 dontdownload <- file.exists(outfile) & !force
-if( any(dontdownload)  )
+if( any(dontdownload) & !quiet )
   {
   message(traceCall(1, "", ": "), sum(dontdownload), " file", if(sum(dontdownload)>1)"s",
           " already existing and not downloaded again: ",
           berryFunctions::truncMessage(outfile[dontdownload], ntrunc=ntrunc, prefix=""),
           "\nNow downloading ",sum(!dontdownload)," files...")
   }
-outfile <- newFilename(outfile, quiet=quiet, ignore=dontdownload, ntrunc=ntrunc)
+outfile <- newFilename(outfile, quiet=quiet, ignore=dontdownload, 
+                       overwrite=overwrite, ntrunc=ntrunc, tellignore=FALSE)
+# since berryFunctions 1.15.9 (2017-06-14), outfile is now an absolute path
 # Optional progress bar:
 if(progbar) lapply <- pbapply::pblapply
 # ------------------------------------------------------------------------------
@@ -173,9 +182,8 @@ output <- outfile
 if(read)
   {
   if(progbar) message("Reading ", length(outfile), " file", if(length(outfile)>1)"s", "...")
-  output <- readDWD(file=outfile, meta=meta, format=format, progbar=progbar)
-  } else
-output <- paste0(dir,"/",output)
+  output <- readDWD(file=outfile, meta=meta, fread=fread, format=format, progbar=progbar)
+  }
 # output:
 return(invisible(output))
 }

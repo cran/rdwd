@@ -4,9 +4,10 @@
 \alias{dataDWD}
 \title{Download data from the DWD CDC FTP Server}
 \usage{
-dataDWD(file, dir = "DWDdata", force = FALSE, sleep = 0, quiet = FALSE,
-  progbar = !quiet, browse = FALSE, read = TRUE, meta = substr(file,
-  nchar(file) - 3, 10000) == ".txt", format = NA, ntrunc = 2, ...)
+dataDWD(file, dir = "DWDdata", force = FALSE, overwrite = FALSE,
+  sleep = 0, quiet = FALSE, progbar = !quiet, browse = FALSE,
+  read = TRUE, meta = substr(file, nchar(file) - 3, 10000) == ".txt",
+  fread = FALSE, format = NA, ntrunc = 2, ...)
 }
 \arguments{
 \item{file}{Char (vector): complete file URL(s) (including base and filename.zip) as returned by
@@ -15,8 +16,11 @@ dataDWD(file, dir = "DWDdata", force = FALSE, sleep = 0, quiet = FALSE,
 \item{dir}{Char: Writeable directory name where to save the downloaded file.
 Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}}
 
-\item{force}{Logical: always download, even if the file already exists in \code{dir}?
+\item{force}{Logical (vector): always download, even if the file already exists in \code{dir}?
 If FALSE, it is still read (or name returned). DEFAULT: FALSE}
+
+\item{overwrite}{Logical (vector): if force=TRUE, overwrite the existing file
+rather than append "_1"/"_2" etc to the filename? DEFAULT: FALSE}
 
 \item{sleep}{Number. If not 0, a random number of seconds between 0 and
 \code{sleep} is passed to \code{\link{Sys.sleep}} after each download
@@ -39,6 +43,8 @@ only download is performed and the filename(s) returned. DEFAULT: TRUE}
 \item{meta}{Logical (vector): is the \code{file} a meta file? Passed to
 \code{\link{readDWD}}. DEFAULT: TRUE for each file ending in ".txt"}
 
+\item{fread}{Fast reading? See \code{\link{readDWD}}. DEFAULT: FALSE}
+
 \item{format}{Char (vector): format used in \code{\link{strptime}} to convert date/time column,
 see \code{\link{readDWD}}. DEFAULT: NA}
 
@@ -48,7 +54,7 @@ before they get truncated with message "(and xx more)". DEFAULT: 2}
 \item{\dots}{Further arguments passed to \code{\link{download.file}}}
 }
 \value{
-Presuming downloading and processing were successfull:
+Presuming downloading and processing were successful:
         if \code{read=TRUE}, a data.frame of the desired dataset
         (as returned by \code{\link{readDWD}}),
         otherwise the filename as saved on disc

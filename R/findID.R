@@ -1,12 +1,13 @@
 #' find DWD weather station ID from name
-#'
+#' 
 #' Identify DWD weather station ID from station name
-#'
+#' 
 #' @return Character string (vector) with ID(s)
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct-Nov 2016
 #' @seealso used in \code{\link{selectDWD}}, \code{\link{metaInfo}}
 #' @keywords character
 #' @export
+#' @importFrom berryFunctions traceCall
 #' @examples
 #' \dontrun{
 #' # Give weather station name (must be existing in metaIndex):
@@ -15,24 +16,24 @@
 #' # all names containing "Hamburg":
 #' findID("Hamburg", exactmatch=FALSE)
 #' findID("Potsdam", exactmatch=FALSE)
-#'
+#' 
 #' # vectorized:
 #' findID(c("Potsdam","Berlin-Buch"))
-#'
+#' 
 #' # German Umlauts are changed to ue, ae, oe, ss
 #' findID("Muenchen", FALSE)
 #' berryFunctions::convertUmlaut("M?nchen") # use this to convert umlauts in lists
-#'
+#' 
 #' # See if warnings come as expected and are informative:
 #' findID("this_is_not_a_city")
 #' findID(c("Wuppertal"," this_is_not_a_city") )
-#'
+#' 
 #' findID()
 #' findID(7777)
 #' findID("01050")
-#'
+#' 
 #' }
-#'
+#' 
 #' @param name  Char: station name(s) that will be matched in \code{mindex} to obtain
 #'              \bold{id}. DEFAULT: ""
 #' @param exactmatch Logical: Should \code{name} match an entry in \code{mindex}
@@ -43,7 +44,7 @@
 #'              DEFAULT: TRUE
 #' @param mindex Single object: Index used to select \code{id} if \code{name}
 #'              is given. DEFAULT: \code{rdwd:::\link{metaIndex}}
-#'
+#' 
 findID <- function(
 name="",
 exactmatch=TRUE,
