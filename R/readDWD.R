@@ -47,7 +47,7 @@
 #' 
 readDWD <- function(
 file,
-meta=substr(file, nchar(file)-3, 1e4)==".txt",
+meta=grepl('.txt$', file),
 fread=FALSE,
 minfo=FALSE,
 format=NA,
@@ -169,7 +169,7 @@ return(dat)
 readDWD.meta <- function(file)
 {
 # read one line to get column widths and names
-oneline <- readLines(file, n=3)
+oneline <- readLines(file, n=3, encoding="latin1")
 # column widths (automatic detection across different styles used by the DWD)
 spaces <- unlist(gregexpr(" ", oneline[3]))
 breaks <- spaces[which(diff(spaces)!=1)]
@@ -178,8 +178,10 @@ breaks[3] <- breaks[3] -9 # right-adjusted column
 breaks[4:5] <- breaks[4:5] -1 # right-adjusted columns
 widths <- diff(c(0,breaks,200))
 # actually read metadata, suppress readLines warning about EOL:
-stats <- suppressWarnings(read.fwf(file, widths=widths, skip=2, strip.white=TRUE) )
+stats <- suppressWarnings(read.fwf(file, widths=widths, skip=2, strip.white=TRUE, fileEncoding="latin1") )
 # column names:
+# remove duplicate spaces (2018-03 only in subdaily_stand...Beschreibung....txt)
+while( grepl("  ",oneline[1]) )  oneline[1] <- gsub("  ", " ", oneline[1])
 colnames(stats) <- strsplit(oneline[1], " ")[[1]]
 # check classes:
 classes <- c("integer", "integer", "integer", "integer", "numeric", "numeric", "factor", "factor")
