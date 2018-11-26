@@ -11,7 +11,7 @@
 #' @return Invisible data.frame of the desired dataset, or a list of data.frames
 #'         if length(file) > 1.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jul-Oct 2016
-#' @seealso \code{\link{dataDWD}}, \code{\link{selectDWD}}
+#' @seealso \code{\link{dataDWD}}, \code{\link{readVars}}, \code{\link{selectDWD}}
 #' @keywords file chron
 #' @importFrom utils read.table unzip read.fwf
 #' @importFrom berryFunctions checkFile na9 traceCall
@@ -71,7 +71,7 @@ if(len>1)
 if(progbar) lapply <- pbapply::pblapply
 # check package availability:
 if(any(fread))   if(!requireNamespace("data.table", quietly=TRUE))
-    stop("in readDWD: Please first install data.table:",
+    stop("in rdwd::readDWD: to use fread=TRUE, please first install data.table:",
          "   install.packages('data.table')", call.=FALSE)
 #
 checkFile(file)
@@ -99,7 +99,8 @@ dat <- readDWD.data(f, minfo=minfo[i], fread=fread[i])
 # process time-stamp: http://stackoverflow.com/a/13022441
 if(!is.null(format[i]) & "MESS_DATUM" %in% colnames(dat) & !minfo[i])
   {
-  if(is.na(format[i])) format <- if(nchar(dat$MESS_DATUM[1])==8) "%Y%m%d" else "%Y%m%d%H"
+  nch <- nchar(as.character(dat$MESS_DATUM[1]))
+  if(is.na(format[i])) format <- if(nch==8) "%Y%m%d" else if(nch==13) "%Y%m%d%H:%M" else"%Y%m%d%H"
   dat$MESS_DATUM <- as.POSIXct(as.character(dat$MESS_DATUM), format=format, tz=tz[i])
   }
 # return dataset:
@@ -126,7 +127,7 @@ if(fread)
   # http://dsnotes.com/post/2017-01-27-lessons-learned-from-outbrain-click-prediction-kaggle-competition/
   fp <- unzip(file, list=TRUE) # file produkt*, the actual datafile
   fp <- fp$Name[grepl("produkt",fp$Name)]
-  dat <- data.table::fread(paste("unzip -p", file, fp), na.strings=na9(),
+  dat <- data.table::fread(paste("unzip -p", file, fp), na.strings=na9(nspace=0),
                            header=TRUE, sep=";", stringsAsFactors=TRUE, data.table=FALSE)
   return(dat)
   }

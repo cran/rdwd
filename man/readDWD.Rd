@@ -4,8 +4,8 @@
 \alias{readDWD}
 \title{Process data from the DWD CDC FTP Server}
 \usage{
-readDWD(file, meta = grepl(".txt$", file), fread = FALSE, minfo = FALSE,
-  format = NA, tz = "GMT", progbar = TRUE)
+readDWD(file, meta = grepl(".txt$", file), fread = FALSE,
+  minfo = FALSE, format = NA, tz = "GMT", progbar = TRUE)
 }
 \arguments{
 \item{file}{Char (vector): name(s) of the file(s) downloaded with \code{\link{dataDWD}},
@@ -56,7 +56,7 @@ They can then be processed with \code{dd$Stations_id <- berryFunctions::convertU
 
 }
 \seealso{
-\code{\link{dataDWD}}, \code{\link{selectDWD}}
+\code{\link{dataDWD}}, \code{\link{readVars}}, \code{\link{selectDWD}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Jul-Oct 2016

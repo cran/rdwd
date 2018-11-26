@@ -89,14 +89,16 @@ fileIndex <- gsub("subdaily/standard_format/", "subdaily/standard_format//", fil
 fileIndex <- ifelse(substr(fileIndex,1,1)=="/", substr(fileIndex,2,1e4), fileIndex)
 prec1min <- substr(fileIndex,1,33) == "1_minute/precipitation/historical"
 prec1min <- substr(fileIndex,1,37) != "1_minute/precipitation/historical/ein" & prec1min
+any1min <- any(prec1min)
+ncolumns <- 4 + any1min # supposed number of columns: 4, 5 if any prec1min in paths
 # split into parts:
 if(!quiet) messaget("Splitting filenames...")
 fileIndex <- l2df(pbapply::pblapply(fileIndex,function(x) strsplit(x,"/")[[1]]))
-# check if there are actually 5 columns (might be different with non-standard base)
-if(ncol(fileIndex)!=5) stop(traceCall(1, "in ", ": "), "index does not have 5 columns, but ",
-                            ncol(fileIndex), call.=FALSE)
-fileIndex[prec1min,4] <- fileIndex[prec1min,5]
-colnames(fileIndex) <- c("res","var","per","file","dummyfromyear1minute")
+# check if there are actually 4/5 columns (might be different with non-standard base)
+if(ncol(fileIndex)!=ncolumns) stop(traceCall(1, "in ", ": "), "index does not have ",
+                        ncolumns," columns, but ", ncol(fileIndex), call.=FALSE)
+if(any1min) fileIndex[prec1min,4] <- fileIndex[prec1min,5]
+colnames(fileIndex) <- c("res","var","per","file",if(any1min) "dummyfromyear1minute")
 file <- fileIndex$file
 fileIndex <- fileIndex[,1:3] # file will be re-attached (with path) as the last column
 #
@@ -201,7 +203,7 @@ if(mname!="")
 #
 # geoIndex ------------------------------------------------------------------
 if(!quiet) messaget("Creating geoIndex...")
-geoIndex <- metaIndex     # June 2017  35'428 rows
+geoIndex <- metaIndex     # June 2017  35'428 rows, 76'772 in Nov 2018
 # lowercase + english column names in desired order
 geoIndex$id <- geoIndex$Stations_id
 geoIndex$name <- geoIndex$Stationsname
@@ -218,7 +220,7 @@ geoIndex$geoLaenge <- NULL
 id_char <- as.character(geoIndex$id)
 #
 # average elevation per station ID:
-#table(tapply(geoIndex$ele, geoIndex$id, function(x) round(diff(range(x)),2) ))
+#table(tapply(geoIndex$Stationshoehe, geoIndex$id, function(x) round(diff(range(x)),2) ))
 # only up to 0.5m diff
 ele <- round(tapply(geoIndex$Stationshoehe, geoIndex$id, mean), 0.1)
 geoIndex$ele <- as.numeric(ele[id_char])
@@ -230,6 +232,9 @@ geoIndex$nfiles    <- table(geoIndex$id[ geoIndex$hasfile])[id_char]
 geoIndex$nonpublic <- table(geoIndex$id[!geoIndex$hasfile])[id_char]
 geoIndex$nfiles   [is.na(geoIndex$nfiles   )] <- 0
 geoIndex$nonpublic[is.na(geoIndex$nonpublic)] <- 0
+geoIndex$nfiles    <- as.numeric(geoIndex$nfiles)
+geoIndex$nonpublic <- as.numeric(geoIndex$nonpublic)
+
 #
 # recent file?:
 recentfile <- geoIndex$per=="recent" | geoIndex$bis_datum >
@@ -274,6 +279,7 @@ if(any(dupli_c))
 #
 # column for interactive map popup display:
 geoIndex$display <- rowDisplay(geoIndex)
+geoIndex$display <- gsub("nfiles", "n public files", geoIndex$display)
 # colors for map:
 geoIndex$col <- "blue"
 geoIndex$col[!geoIndex$recentfile] <- "red"

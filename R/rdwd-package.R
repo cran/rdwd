@@ -32,10 +32,11 @@
 #'          \href{https://www.rdocumentation.org/packages/rnoaa}{rnoaa}\cr
 #'          World data: \href{https://ropensci.org/blog/blog/2017/04/04/gsodr}{Global Surface Summary of the Day}\cr
 #'          Durch data: \url{https://github.com/bvhest/KNMIr}\cr
+#'          Canadian data: \url{https://cran.r-project.org/package=rclimateca}\cr
 #' @section Searchability Terms:
 #' Weather Data Germany download with R, Climate Data Germany\cr
 #' Deutscher Wetterdienst R Daten download Klimastationen\cr
-#' DWD Daten mit R runterladen, Wetter und Klimadaten in R\cr
+#' DWD Daten mit R runterladen, Wetter und Klimadaten in R
 NULL
 
 
@@ -73,11 +74,11 @@ release_questions <- function() {
 #' @aliases fileIndex metaIndex geoIndex
 #' @docType data
 #' @format
-#' \bold{fileIndex}: data.frame with character strings. ca 25k rows x 7 columns:\cr
+#' \bold{fileIndex}: data.frame with character strings. ca 219k rows x 7 columns:\cr
 #'         \code{res}, \code{var}, \code{per} (see \code{\link{selectDWD}}),
 #'         station \code{id} and time series \code{start} and \code{end}
 #'         according to \code{path}.\cr
-#' \bold{metaIndex}: data.frame with ca 35k rows for 12 columns:\cr
+#' \bold{metaIndex}: data.frame with ca 60k rows for 12 columns:\cr
 #'         \code{Stations_id, von_datum, bis_datum,
 #'         Stationshoehe, geoBreite, geoLaenge, Stationsname, Bundesland,
 #'         res, var, per, hasfile} \cr
@@ -181,6 +182,89 @@ return(invisible(out))
 }
 
 
+# parameter_abbreviations ---------------------------------------------------------------------
+
+#' Parameter abbreviations for data on the DWD CDC FTP server
+#' 
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jun 2018
+#' @seealso \code{\link{readVars}}, \code{\link{readDWD}}
+#' @keywords datasets
+#' @export
+#' @examples
+#' head(parameter_abbreviations)
+#' 
+parameter_abbreviations <- read.table(header=TRUE, strip.white=TRUE, 
+                                      stringsAsFactors=FALSE, text="
+Parameter   Kurz
+ATMO_STRAHL Atmospaerenstrahlung
+ATMO_LBERG	 Atmospaerenstrahlung_Stundensumme
+ASH_6       Ausstichsschneehoehe
+NM	         Bedeckungsgrad
+V_N        	Bedeckungsgrad
+V_S1_NS    	Bedeckungsgrad_Schicht1
+V_S2_NS    	Bedeckungsgrad_Schicht2
+V_S3_NS    	Bedeckungsgrad_Schicht3
+V_S4_NS    	Bedeckungsgrad_Schicht4
+VPM        	Dampfdruck
+V_TE002	    Erdbodentemperatur_002cm
+V_TE005	    Erdbodentemperatur_005cm
+V_TE010	    Erdbodentemperatur_010cm
+V_TE020	    Erdbodentemperatur_020cm
+V_TE002M	   Erdbodentemperatur_02cm
+V_TE050	    Erdbodentemperatur_050cm
+V_TE005M	   Erdbodentemperatur_05cm
+V_TE100	    Erdbodentemperatur_100cm
+V_TE010M	   Erdbodentemperatur_10cm
+V_TE020M	   Erdbodentemperatur_20cm
+V_TE050M	   Erdbodentemperatur_50cm
+WASH_6	     Gesamtschneewasseraequivalent
+FG_STRAHL  	Globalstrahlung
+FG_LBERG	   Globalstrahlung_Stundensumme
+FD_STRAHL  	Himmelsstrahlung_diffus
+FD_LBERG	   Himmelsstrahlung_diffus_Stundensumme
+PM	         Luftdruck
+P	          Luftdruck_NN
+P0          Luftdruck_Stationshoehe
+TMK	        Lufttemperatur
+TT_TU       Lufttemperatur
+TGK	        Lufttemperatur_5cm_min
+TXK	        Lufttemperatur_max
+TNK 	       Lufttemperatur_min
+RSKF	       Niederschlagsform
+RSF 	       Niederschlagsform
+WRTR	       Niederschlagsform
+RSK	        Niederschlagshoehe
+RS	         Niederschlagshoehe
+R1	         Niederschlagshoehe
+RS_IND	     Niederschlagsindikator
+UPM	        Relative_Feuchte
+RF_TU 	     Relative_Feuchte
+SHK_TAG    	Schneehoehe
+SH_TAG	     Schneehoehe
+WAAS_6	     Schneewasseraequivalent
+V_VV  	     Sichtweite
+SDK	        Sonnenscheindauer
+SD_STRAHL  	Sonnenscheindauer
+SD_SO	      Sonnenscheindauer
+SD_LBERG    Sonnenscheindauer_Stundensumme
+FM          Windgeschwindigkeit
+F	          Windgeschwindigkeit
+D	          Windrichtung
+FX          Windspitze
+V_S1_CSA    Wolkenart_Abk_Schicht1
+V_S2_CSA    Wolkenart_Abk_Schicht2
+V_S3_CSA    Wolkenart_Abk_Schicht3
+V_S4_CSA    Wolkenart_Abk_Schicht4
+V_S1_CS	    Wolkenart_Schicht1
+V_S2_CS	    Wolkenart_Schicht2
+V_S3_CS	    Wolkenart_Schicht3
+V_S4_CS	    Wolkenart_Schicht4
+V_S1_HHS    Wolkenhoehe_Schicht1
+V_S2_HHS    Wolkenhoehe_Schicht2
+V_S3_HHS    Wolkenhoehe_Schicht3
+V_S4_HHS    Wolkenhoehe_Schicht4
+
+")
 
 # rowDisplay ---------------------------------------------------------------------
 
@@ -209,18 +293,41 @@ apply(x, MARGIN=1, perrow)
 
 
 
+# DEU Map dataset --------------------------------------------------------------
+
+#' Map of German states (Bundeslaender) from GADM through the \code{raster} package
+#' @name DEU
+#' @details Obtained with the code: \cr
+#' \code{DEU1 <- raster::getData("GADM", country="DEU", level=1)}\cr
+#' \code{DEU <- rgeos::gSimplify(DEU1, tol=0.02, topologyPreserve=FALSE)}\cr
+#' \code{raster::plot(DEU1)}\cr
+#' \code{raster::plot(DEU)}\cr
+#' \code{save(DEU,        file="data/DEU.rda")}\cr
+#' \code{tools::resaveRdaFiles("data/DEU.rda")}\cr
+#' @docType data
+#' @format Formal class 'SpatialPolygons' [package "sp"] with 4 slots
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, May 2018
+#' @keywords datasets
+
+
+
+
+
 # update Indexes ---------------------------------------------------------------
 
 if(FALSE){
-# FTP indexing commented out to prevent accidental calling:
-# dwdfiles <- indexFTP(sleep=0, filename="")
-# dwdfiles <- indexFTP(dwdfiles, sleep=1, filename="", overwrite=TRUE)
+dwdfiles <- indexFTP(sleep=0, filename="", overwrite=TRUE)
+dwdfiles <- indexFTP(dwdfiles, sleep=2, filename="", overwrite=TRUE)
   # potentially needed several times with small sleep values on restrictive FTP servers
 
 # delete meta folder for truly new data
 # check for dupliate description files (Monatwerte + Monatswerte, e.g., also in INDEX_OF.txt)
 
-dwdfiles <- readLines("DWDdata/INDEX_of_DWD_.txt") # 25'757 elements (2017-03-14) 218'593 (2018-03-25)
+
+dwdfiles <- readLines("DWDdata/INDEX_of_DWD_.txt") 
+#  25'757 elements (2017-03-14) 
+# 218'593 (2018-03-25)
+# 228'830 (2018-11-26)
 index <- createIndex(paths=dwdfiles, meta=TRUE) # ca 70 secs +30 if files are not yet downloaded
 { # save indexes into package:
 fileIndex <- index[[1]]
@@ -229,12 +336,13 @@ metaIndex <- index[[2]]
 # save and compress:
 message("saving index rda files...")
 save(fileIndex, file="data/fileIndex.rda")
-cat(".")
 save(metaIndex, file="data/metaIndex.rda")
 save( geoIndex, file="data/geoIndex.rda")
 message("compressing files...")
 tools::resaveRdaFiles("data/fileIndex.rda") #devtools::use_data(fileIndex, internal=TRUE)
+cat(".")
 tools::resaveRdaFiles("data/metaIndex.rda")
+cat(".")
 tools::resaveRdaFiles("data/geoIndex.rda")
 message("checking files...")
 # check writing and reading of the files:
