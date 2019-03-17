@@ -4,18 +4,18 @@
 \alias{createIndex}
 \title{Create file and meta index of the DWD CDC FTP Server}
 \usage{
-createIndex(paths,
-  base = "ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate",
-  dir = "DWDdata", fname = "fileIndex.txt", meta = FALSE,
-  metadir = "meta", mname = "metaIndex.txt", gname = "geoIndex.txt",
-  quiet = FALSE, ...)
+createIndex(paths, base = dwdbase, dir = "DWDdata",
+  fname = "fileIndex.txt", meta = FALSE, metadir = "meta",
+  mname = "metaIndex.txt", gname = "geoIndex.txt", quiet = FALSE,
+  ...)
 }
 \arguments{
 \item{paths}{Char: vector of DWD paths returned by \code{\link{indexFTP}} called
 with the same \code{base} value as this function}
 
 \item{base}{Main directory of DWD ftp server, defaulting to observed climatic records.
-DEFAULT: \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}}
+DEFAULT: \code{\link{dwdbase}}:
+\url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}}
 
 \item{dir}{Char: writeable directory name where to save the main output(s).
 Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}}
@@ -70,13 +70,6 @@ lapply(ind2, head)
 if(interactive())
 browseURL("https://github.com/brry/rdwd/blob/master/R/rdwd-package.R")
 # where the Indexes are added to the package
-
-# Read results in later:
-\dontrun{ ## files normally not yet available:
-fileIndex2 <- read.table("DWDdata/fileIndex.txt", sep="\\t", header=TRUE,
-                         colClasses="character")
-metaIndex2 <- read.table("DWDdata/metaIndex.txt", sep="\\t", header=TRUE, as.is=TRUE)
-}
 
 }
 \seealso{

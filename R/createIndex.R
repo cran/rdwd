@@ -35,17 +35,11 @@
 #' browseURL("https://github.com/brry/rdwd/blob/master/R/rdwd-package.R")
 #' # where the Indexes are added to the package
 #' 
-#' # Read results in later:
-#' \dontrun{ ## files normally not yet available:
-#' fileIndex2 <- read.table("DWDdata/fileIndex.txt", sep="\t", header=TRUE,
-#'                          colClasses="character")
-#' metaIndex2 <- read.table("DWDdata/metaIndex.txt", sep="\t", header=TRUE, as.is=TRUE)
-#' }
-#' 
 #' @param paths Char: vector of DWD paths returned by \code{\link{indexFTP}} called
 #'              with the same \code{base} value as this function
 #' @param base  Main directory of DWD ftp server, defaulting to observed climatic records.
-#'              DEFAULT: \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
+#'              DEFAULT: \code{\link{dwdbase}}:
+#'              \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
 #' @param dir   Char: writeable directory name where to save the main output(s).
 #'              Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}
 #' @param fname Char: Name of file in \code{dir} in which to write \code{\link{fileIndex}}.
@@ -65,7 +59,7 @@
 #' 
 createIndex <- function(
 paths,
-base="ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate",
+base=dwdbase,
 dir="DWDdata",
 fname="fileIndex.txt",
 meta=FALSE,
@@ -110,16 +104,18 @@ id <- ""
 per <- fileIndex$per
 sol <- fileIndex$var=="solar" 
 zip <- info[,1]=="zip"
+if(!quiet) messaget("Extracting station IDs from filenames...")
 id <- ifelse(zip & per=="historical"       , info[,5], id)
 id <- ifelse(zip & per=="recent"           , info[,3], id)
 id <- ifelse(zip & per=="now"              , info[,3], id)
 id <- ifelse(zip & sol & per!="historical" , info[,3], id) # var==solar
 id <- ifelse(zip & per=="meta_data"        , info[,2], id)
 id <- ifelse(substr(file,1,2)=="kl", substr(file,4,8), id) # res==subdaily
-fileIndex$id <- id
+fileIndex$id <- suppressWarnings(as.integer(id))
 rm(id, per, sol, zip)
 #
 # start and end of time series (according to file name):
+if(!quiet) messaget("Extracting time series range from filenames...")
 ziphist <- fileIndex$per=="historical"  & info[,1]=="zip"
 multi <-  fileIndex$res=="multi_annual" & info[,1]=="txt" & info[,3]!="Stationsliste"
 # actual selection:
@@ -128,6 +124,13 @@ fileIndex$start <- ifelse(ziphist|multi, info[,4], fileIndex$start)
 # Analogous for end:
 fileIndex$end <- ""
 fileIndex$end <- ifelse(ziphist|multi, info[,3], fileIndex$end)
+#
+# is the file a metafile?
+ma <- fileIndex$res=="multi_annual"
+ismeta1 <- !ma & grepl('.txt$', paths) & grepl("Beschreibung", paths)
+ismeta2 <-  ma & grepl("Stationsliste", paths)
+fileIndex$ismeta <- ismeta1 | ismeta2 | grepl('.pdf$', paths) | grepl('.html$', paths)
+rm(ma, ismeta1, ismeta2)
 #
 # Append path for accurate file reading later on, e.g. with dataDWD:
 fileIndex$path <- paths
@@ -149,11 +152,11 @@ if(!isTRUE(meta)) return(invisible(fileIndex))
 # select Beschreibung_.txt files only:
 sel <- grepl('.txt$', fileIndex$path)
 sel <- sel & grepl("Beschreibung", fileIndex$path)
-sel <- sel & fileIndex$res != "subdaily" # has different columns
+# sel <- sel & fileIndex$res != "subdaily" # has different columns
 #sel <- sel & fileIndex$res %in% c("monthly","daily","hourly")
 # manual correction March 2018 for duplicate description files:
-descdupli <- basename(paths)=="ein_min_rr_Beschreibung_Stationen.txt" & grepl("/20", dirname(paths))
-sel <- sel & !descdupli
+#descdupli <- basename(paths)=="ein_min_rr_Beschreibung_Stationen.txt" & grepl("/20", dirname(paths))
+#sel <- sel & !descdupli
 
 if(sum(sel)<2) stop(traceCall(1, "in ", ": "),
               "There need to be at least two 'Beschreibung' files. (There is ",

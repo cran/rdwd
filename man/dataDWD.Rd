@@ -4,14 +4,18 @@
 \alias{dataDWD}
 \title{Download data from the DWD CDC FTP Server}
 \usage{
-dataDWD(file, dir = "DWDdata", force = FALSE, overwrite = FALSE,
-  sleep = 0, quiet = FALSE, progbar = !quiet, browse = FALSE,
-  read = TRUE, meta = grepl(".txt$", file), fread = FALSE,
-  format = NA, ntrunc = 2, ...)
+dataDWD(file, base = dwdbase, dir = "DWDdata", force = FALSE,
+  overwrite = FALSE, sleep = 0, quiet = FALSE, progbar = !quiet,
+  browse = FALSE, read = TRUE, meta = grepl(".txt$", file),
+  fread = FALSE, format = NA, ntrunc = 2, dfargs = NULL, ...)
 }
 \arguments{
 \item{file}{Char (vector): complete file URL(s) (including base and filename.zip) as returned by
 \code{\link{selectDWD}}. Can be a vector with several filenames.}
+
+\item{base}{Single char: base URL that will be removed from output file names.
+DEFAULT: \code{\link{dwdbase}}:
+\url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}}
 
 \item{dir}{Char: Writeable directory name where to save the downloaded file.
 Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}}
@@ -52,7 +56,10 @@ see \code{\link{readDWD}}. DEFAULT: NA}
 \item{ntrunc}{Single integer: number of filenames printed in messages
 before they get truncated with message "(and xx more)". DEFAULT: 2}
 
-\item{\dots}{Further arguments passed to \code{\link{download.file}}}
+\item{dfargs}{Named list of additional arguments passed to \code{\link{download.file}}}
+
+\item{\dots}{Further arguments passed to \code{\link{readDWD}}. 
+Were passed to \code{\link{download.file}} prior to rdwd 0.11.7 (2019-02-25)}
 }
 \value{
 Presuming downloading and processing were successful:
@@ -70,52 +77,39 @@ If \code{read=TRUE}, it is also read, processed and returned as a data.frame.
 }
 \examples{
 \dontrun{ ## requires internet connection
-# find files for a given station name and file path:
-link <- selectDWD("Kupferzell-Rechbach", res="hourly", var="precipitation", per="recent")
-# actually download and read files
-prec <- dataDWD(link, dir="DWDdata") # the default dir
-fname <- dataDWD(link, read=FALSE) # filename, no second download (unless force=TRUE)
+# find FTP files for a given station name and file path:
+link <- selectDWD("Fuerstenzell", res="hourly", var="wind", per="recent")
+# download file:
+fname <- dataDWD(link, dir=tempdir(), read=FALSE) ; fname
+# dir="DWDdata" is the default directory to store files
+# unless force=TRUE, already obtained files will not be downloaded again
+
+# read and plot file:
+wind <- readDWD(fname)          ; head(wind)
+metafiles <- readMeta(fname)    ; str(metafiles, max.level=1)
+column_names <- readVars(fname) ; head(column_names)
+
+plot(wind$MESS_DATUM, wind$F, main="DWD hourly wind Fuerstenzell", col="blue",
+     xaxt="n", las=1, type="l", xlab="Date", ylab="Hourly Wind speed  [m/s]")
+berryFunctions::monthAxis(1, ym=T)
+
 
 # current and historical files:
-link <- selectDWD("Potsdam", res="daily", var="kl", per="hr", outvec=TRUE); link
-potsdam <- dataDWD(link)
+link <- selectDWD("Potsdam", res="daily", var="kl", per="hr"); link
+potsdam <- dataDWD(link, dir=tempdir())
 potsdam <- do.call(rbind, potsdam) # this will partly overlap in time
-plot(TMK~MESS_DATUM, data=tail(potsdam,1000), type="l")
-# Straight line marks the jump back in time
-# check for equality:
-dup <- which(duplicated(potsdam$MESS_DATUM))
-dup_df <- which(duplicated(potsdam))
-err <- dup[ ! dup \%in\% dup_df]
-err <- potsdam[potsdam$MESS_DATUM \%in\% potsdam$MESS_DATUM[err], ]
-err <- err[order(err$MESS_DATUM),]
-View(err) # WINDGESCHWINDIGKEIT (wind speed) has been slightly changed
-# Keep only historical dataset:
+plot(TMK~MESS_DATUM, data=tail(potsdam,1500), type="l")
+# The straight line marks the jump back in time
+# Keep only historical data in the overlap time period:
 potsdam <- potsdam[!duplicated(potsdam$MESS_DATUM),]
 
-# several files:
-link <- c(link, selectDWD("Potsdam", res="daily", var="kl", per="hr", outvec=TRUE))
-clim <- dataDWD(link)
-fname <- dataDWD(link, read=FALSE)
-clim <- readDWD(fname)
-unzip(zipfile=paste0("DWDdata/",fname[1]), exdir="DWDdata/Testunzip")
-# There's quite some important meta information there!
 
-plot(prec$MESS_DATUM, prec$R1, main="DWD hourly rain Kupferzell", col="blue",
-     xaxt="n", las=1, type="l", xlab="Date", ylab="Hourly rainfall  [mm]")
-monthAxis(1, ym=T)
-
-d <- dataDWD(selectDWD(id="05692", res="daily", var="kl", per="recent"))
-# writes into the same folder (dir="DWDdata")
-
-folder <- dataDWD(link, browse=T)
-folder
-
-# With many files, use sleep
-links <- selectDWD(res="daily", var="solar", meta=FALSE)
-sol <- dataDWD(links, sleep=20) # random waiting time after download (0 to 20 secs)
+# With many files (>>50), use sleep to avoid getting kicked off the FTP server
+#links <- selectDWD(res="daily", var="solar")
+#sol <- dataDWD(links, sleep=20) # random waiting time after download (0 to 20 secs)
 
 # Real life example with data completeness check etc:
-browseURL("http://github.com/brry/prectemp/blob/master/Code_example.R")
+browseURL("https://github.com/brry/prectemp/blob/master/Code_analysis.R")
 
 }
 

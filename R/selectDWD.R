@@ -16,6 +16,8 @@
 #'  3 \tab |  ""  \tab | "xx" \tab | The zip file names at \bold{path} \cr
 #'  4 \tab | "xx" \tab | "xx" \tab | Regular single data file name \cr
 #' }
+#' For case 2, you can explicitly set \code{res="",var="",per=""} to avoid the 
+#' default interactive selection.\cr
 #' For case 3 and 4 (\bold{path} given), you can set \code{meta=TRUE}.
 #' Then selectDWD will return the name of the station description file at \bold{path}.
 #' This is why case 3 with \code{meta=FALSE} only returns the data file names (ending in .zip).\cr\cr\cr
@@ -53,10 +55,9 @@
 #'                  \tab | mean_61-90 - \tab |                   \cr
 #'                  \tab | mean_71-00 - \tab |                   \cr
 #'                  \tab | mean_81-10 - \tab |                   \cr
+#'                  \tab |              \tab | air_temperature < \cr
 #'                  \tab |              \tab | pressure <        \cr
 #'                  \tab |              \tab | standard_format - \cr
-#'                  \tab |              \tab |                   \cr
-#'                  \tab |              \tab |                   \cr
 #' }
 #' 
 #' @return Character string with file path and name(s) in the format
@@ -66,80 +67,70 @@
 #'          \code{vignette("mapDWD", package="rdwd")}
 #' @keywords file
 #' @importFrom berryFunctions truncMessage traceCall
+#' @importFrom utils menu
 #' @export
 #' @examples
 #' # Give weather station name (must be existing in metaIndex):
-#' findID("Potsdam", exactmatch=FALSE)
 #' selectDWD("Potsdam", res="daily", var="kl", per="historical")
+#' 
 #' # all files for all stations matching "Koeln":
-#' selectDWD("Koeln", exactmatch=FALSE)
+#' selectDWD("Koeln", res="", var="", per="", exactmatch=FALSE)
 #' findID("Koeln", FALSE)
 #' 
 #' \dontrun{ # Excluded from CRAN checks to save time
-#' # or directly give station ID:
-#' selectDWD(id="00386", res="daily", var="kl", per="historical")
+#' 
+#' # selectDWD("Potsdam") # interactive selection of res/var/per
+#' 
+#' # directly give station ID, can also be id="00386" :
 #' selectDWD(id=386, res="daily", var="kl", per="historical")
-#' # period abbreviatable:
+#' 
+#' # period can be abbreviated:
 #' selectDWD(id="00386", res="daily", var="kl", per="h")
 #' selectDWD(id="00386", res="daily", var="kl", per="h", meta=TRUE)
 #' 
 #' # vectorizable:
-#' selectDWD(id="01050", res="daily", var="kl", per=c("r","h"))
-#' selectDWD(id="01050", res="daily", var="kl", per="rh", outvec=TRUE)
+#' selectDWD(id="01050", res="daily", var="kl", per="rh") # list if outvec=F
 #' selectDWD(id="01050", res=c("daily","monthly"), var="kl", per="r")
 #' # vectorization gives not the outer product, but elementwise comparison:
 #' selectDWD(id="01050", res=c("daily","monthly"), var="kl", per="hr")
 #' 
 #' # all zip files in all paths matching id:
-#' selectDWD(id=c(1050, 386))
+#' selectDWD(id=c(1050, 386), res="",var="",per="")
 #' # all zip files in a given path (if ID is empty):
 #' head(  selectDWD(id="", res="daily", var="kl", per="recent")   )
 #' 
-#' # See if warnings come as expected and are informative:
-#' selectDWD()
-#' selectDWD(7777)
-#' selectDWD(id=7777)
-#' selectDWD(id="", res="dummy", var="dummy")
-#' selectDWD(res="dummy")
-#' selectDWD(res="daily", per="r")
-#' selectDWD(res="daily", var="kl")
-#' selectDWD(id="01050", res=c("daily","monthly"), var="kl") # needs 'per'
-#' selectDWD(id="00386", meta=TRUE)
-#' 
-#' selectDWD("Potsdam", res="daily", var="solar")
-#' # should be an error:
-#' berryFunctions::is.error(  selectDWD(id="Potsdam", res="daily", var="solar"), TRUE)
-#' berryFunctions::is.error(  selectDWD(id="", current=TRUE) , tell=TRUE, force=TRUE)
 #' }
 #' 
-#' @param name  Char: station name(s) passed to \code{\link{findID}}, along with the
-#'              next two arguments. All ignored if \code{id} is given. DEFAULT: ""
+#' @param name  Char: station name(s) passed to \code{\link{findID}}, along with
+#'              \code{exactmatch} and \code{mindex}. 
+#'              All 3 arguments are ignored if \code{id} is given. DEFAULT: ""
+#' @param res   Char: temporal \bold{res}olution available at \code{base}, usually one of
+#'              \code{c("hourly","daily","monthly")}, see section 'Description' above.
+#'              \code{res/var/per} together form the \bold{path}. 
+#'              DEFAULT: NA for interactive selection
+#' @param var   Char: weather \bold{var}iable of interest, like e.g.
+#'              \code{"air_temperature", "cloudiness", "precipitation",
+#'                      "soil_temperature", "solar", "kl", "more_precip"}
+#'              See above and in \code{View(rdwd:::\link{fileIndex})}. 
+#'              DEFAULT: NA for interactive selection
+#' @param per   Char: desired time \bold{per}iod. One of
+#'              "recent" (data from the last year, up to date usually within a few days) or
+#'              "historical" (long time series). Can be abbreviated (if the first
+#'              letter is "r" or "h", full names are used). To get both datasets,
+#'              use \code{per="hr"} or \code{per="rh"} (and \code{outvec=TRUE}).
+#'              \code{per} is set to "" if var=="solar". 
+#'              DEFAULT: NA for interactive selection
 #' @param exactmatch Logical passed to \code{\link{findID}}: match \code{name}
 #'              with \code{\link{==}})? Else with \code{\link{grepl}}. DEFAULT: TRUE
 #' @param mindex Single object: Index with metadata passed to \code{\link{findID}}.
 #'              DEFAULT: \code{rdwd:::\link{metaIndex}}
 #' @param id    Char/Number: station ID with or without leading zeros, e.g. "00614" or 614.
 #'              Is internally converted to an integer, because some DWD meta data
-#'              files also contain no leading zeros. DEFAULT: findID(name)
+#'              files also contain no leading zeros. DEFAULT: findID(name, exaxtmatch, mindex)
 #' @param base  Single char: main directory of DWD ftp server, defaulting to
-#'              observed climatic records.
+#'              observed climatic records (\code{\link{dwdbase}}).
 #'              Must be the same \code{base} used to create \code{findex}.
 #'              DEFAULT: \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
-#' @param res   Char: temporal \bold{res}olution available at \code{base}, usually one of
-#'              \code{c("hourly","daily","monthly")}, see section 'Description' above.
-#'              \code{res/var/per} together form the \bold{path}. DEFAULT: ""
-#' @param var   Char: weather \bold{var}iable of interest. Usually one of
-#'              \code{c("air_temperature", "cloudiness", "precipitation",
-#'                      "pressure", "sun", "wind")} (only in hourly),
-#'              \code{c("soil_temperature", "solar")} (in hourly and daily), or
-#'              \code{c("kl", "more_precip")} (in daily and monthly).
-#'              See more in \code{View(rdwd:::\link{fileIndex})}. DEFAULT: ""
-#' @param per   Char: desired time \bold{per}iod. One of
-#'              "recent" (data from the last year, up to date usually within a few days) or
-#'              "historical" (long time series). Can be abbreviated (if the first
-#'              letter is "r" or "h", full names are used). To get both datasets,
-#'              use \code{per="hr"} or \code{per="rh"} (and \code{outvec=TRUE}).
-#'              \code{per} is set to "" if var=="solar". DEFAULT: ""
 #' @param findex Single object: Index used to select filename, as returned by
 #'              \code{\link{createIndex}}.To use a current / custom index, use
 #'              \code{myIndex <- createIndex(indexFTP("/daily/solar"))}
@@ -150,28 +141,31 @@
 #'              requires availability of the \code{RCurl} package.
 #'              DEFAULT: FALSE
 #' @param meta  Logical: return metadata txt file name instead of climate data zip file?
-#'              Relevant only in case 4 (path and id given).
+#'              Relevant only in case 4 (path and id given) and case 3 for res="multi_annual".
 #'              See \code{\link{metaIndex}} for a compilation of all metaData files.
 #'              DEFAULT: FALSE
+#' @param meta_txt_only Logical: if \code{meta}, only return .txt files, not the 
+#'              pdf and html files? DEFAULT: TRUE
 #' @param outvec Single logical: if \bold{path} or \bold{ID} length > 1,
 #'              instead of a list, return a vector? (via \code{\link{unlist}}).
-#'              DEFAULT: FALSE
+#'              DEFAULT: \code{per \%in\% c("rh","hr")}
 #' @param \dots Further arguments passed to \code{\link{indexFTP}} if \code{current=TRUE},
 #'              like dir, quiet
 #' 
 selectDWD <- function(
 name="",
+res=NA,
+var=NA,
+per=NA,
 exactmatch=TRUE,
 mindex=metaIndex,
 id=findID(name, exactmatch=exactmatch, mindex=mindex),
-base="ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate",
-res="",
-var="",
-per="",
+base=dwdbase,
 findex=fileIndex,
 current=FALSE,
 meta=FALSE,
-outvec=FALSE,
+meta_txt_only=TRUE,
+outvec=any(per %in% c("rh","hr")),
 ...
 )
 {
@@ -183,17 +177,51 @@ if(length(unused)>0) warning("unused arguments in ", berryFunctions::traceCall(1
 # Input checks and processing:
 findexname <- deparse(substitute(findex))
 # time period insertations:
-p_index_hr <- which(per=="hr")
-p_index_hr <- p_index_hr + seq_along(p_index_hr)-1
-for(i in p_index_hr) per <- append(per, "r", after=i)
-per[per=="hr"] <- "h"
-p_index_rh <- which(per=="rh")
-p_index_rh <- p_index_rh + seq_along(p_index_rh)-1
-for(i in p_index_rh) per <- append(per, "h", after=i)
-per[per=="rh"] <- "r"
-rm(i)
+outvec <- outvec # needs to be evaluated before per is changed
+if(any(per=="hr"|per=="rh", na.rm=TRUE))
+  {
+  p_index_hr <- which(per=="hr")
+  p_index_hr <- p_index_hr + seq_along(p_index_hr)-1
+  for(i in p_index_hr) per <- append(per, "r", after=i)
+  per[per=="hr"] <- "h"
+  p_index_rh <- which(per=="rh")
+  p_index_rh <- p_index_rh + seq_along(p_index_rh)-1
+  for(i in p_index_rh) per <- append(per, "h", after=i)
+  per[per=="rh"] <- "r"
+  rm(i)
+  }
+# res/var/per interactive selection:
+selectPrompt <- function(question, column, res="", var="", index=findex)
+ {
+ if(all(var=="solar" & res %in% c("hourly","daily"))) return("")
+ question <- paste("Which of the following", question, "would you like to use?")
+ options <- index[,column]
+ if(any(res!=""))
+   options <- index[index$res %in% res, column]
+ if(any(var!=""))
+  options <- index[index$res %in% res & index$var %in% var, column]
+ options <- sort(unique(options))
+ if("hourly" %in% options) # order resolution manually:
+   {
+   names(options) <- options
+   ord <- c("1_minute","10_minutes","hourly","subdaily","daily","monthly","annual")
+   ord <- c(ord, options[!options %in% ord]) # potentially further resolutions
+   options <- options[ord]
+   names(options) <- NULL
+   }
+ #options <- c(options, "''")
+ sel <- menu(options, title=question)
+ if(sel==0) return("")
+ options[sel]
+}
+if(anyNA(res)) res[is.na(res)] <- selectPrompt("resolutions", "res")
+if(anyNA(var)) var[is.na(var)] <- selectPrompt("variables",   "var", res=res)
+if(anyNA(per)) per[is.na(per)] <- selectPrompt("periods",     "per", res=res, var=var)
+# 
 # recycle input vectors
 len <- max(length(id), length(res), length(var), length(per), length(meta)  )
+# outside of the loop, the slowest part of the code is getting length(id)
+# because findID obtains id from name. All computing time happens in tolower
 if(len>1)
   {
   id   <- rep(id,   length.out=len)
@@ -201,14 +229,16 @@ if(len>1)
   var  <- rep(var,  length.out=len)
   per  <- rep(per,  length.out=len)
   meta <- rep(meta, length.out=len)
-}
+  meta_txt_only <- rep(meta_txt_only, length.out=len)
+  }
 # be safe from accidental vector input
 base <- base[1]
 # per partial matching (abbreviation):
 per[substr(per,1,1)=="h"] <- "historical"
 per[substr(per,1,1)=="r"] <- "recent"
 # solar per to ""
-per[var=="solar"] <- ""
+per[var=="solar" & res %in% c("hourly","daily")] <- ""
+per[var=="standard_format" & res=="subdaily"] <- ""
 # check ids for accidental letters:
 idlett <- grepl("[A-Za-z]", id)
 if(any(idlett)) stop(traceCall(1, "in ", ": "), "id may not contain letters: ",
@@ -225,7 +255,6 @@ if(current)
   }
 # convert ID to integer:
 id <- suppressWarnings(as.integer(id))
-findex$id <- suppressWarnings(as.integer(findex$id))
 #
 # ------------------------------------------------------------------------------
 #
@@ -236,12 +265,13 @@ output <- lapply(seq_len(len), function(i)
 # cases (as in description)
 givenid <- !is.na(id[i])
 givenpath <- res[i]!="" & var[i]!="" # ignore per, because of var=solar possibility (no per)
+if(res[i]=="multi_annual") givenpath <- res[i]!=""
 #
 # 1: id and path are both empty ------------------------------------------------
 # base + warning
 if(!givenid & !givenpath)
   {
-  warning(traceCall(3, "", ": "), "neither station ID nor FTP folder is given.", call.=FALSE)
+  warning(traceCall(3, "", ": "), "neither station ID nor valid FTP folder is given.", call.=FALSE)
   # call.=FALSE to avoid uninformative  Error in FUN(X[[i]], ...) :
   return(base)
   }
@@ -265,17 +295,19 @@ if(givenid & !givenpath)
 #
 # Case 3 and 4 (path given) - path existence check ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 path <- paste0("/",res[i],"/",var[i],"/",per[i])
-if(all(!grepl(path, findex$path))) warning(traceCall(3, "", ": "), "according to file index '",
-       findexname, "', the path '", path, "' doesn't exist.", call.=FALSE)
+if(res[i]=="multi_annual" & per[i]=="") {per[i] <- var[i]; var[i] <- ""}
 # select entries from file index:
 sel <- res[i]==findex$res & var[i]==findex$var & per[i]==findex$per
+# within the loop, computing time seems to come from the selection
+if(sum(sel)<1) warning(traceCall(3, "", ": "), "according to file index '",
+           findexname, "', the path '", path, "' doesn't exist.", call.=FALSE)
 #
 # case 3 or 4 with meta=TRUE
 # return name of description txt file
 if(meta[i])
   {
-  sel <- sel & grepl('.txt$', findex$path)
-  sel <- sel & grepl("Beschreibung", findex$path)
+  sel <- sel & findex$ismeta
+  if(meta_txt_only[i]) sel <- sel & ! grepl(".pdf$", findex$path)
   # checks:
   if(sum(sel)==0) warning(traceCall(3, "", ": "), "according to file index '",findexname,
                      "', there is no description file in '", path, "'.", call.=FALSE)
@@ -286,7 +318,9 @@ if(meta[i])
 # all filenames EXCEPT metadata (-> only zipfiles)
 if(!givenid & givenpath & !meta[i])
   {
-  sel <- sel & grepl('.zip$', findex$path)  
+  isnotmeta <- grepl('.zip$', findex$path)
+  if(res[i]=="multi_annual") isnotmeta <- !findex$ismeta
+  sel <- sel & isnotmeta 
   filename <- findex[sel,"path"]
   if(length(filename)<1) warning(traceCall(3, "", ": "), "according to file index '",
                                  findexname, "', there is no file in '", path,

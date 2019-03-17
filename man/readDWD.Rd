@@ -4,8 +4,10 @@
 \alias{readDWD}
 \title{Process data from the DWD CDC FTP Server}
 \usage{
-readDWD(file, meta = grepl(".txt$", file), fread = FALSE,
-  minfo = FALSE, format = NA, tz = "GMT", progbar = TRUE)
+readDWD(file, meta = grepl(".txt$", file), binary = grepl(".tar.gz$",
+  file), raster = grepl(".asc.gz$", file),
+  multia = grepl("Standort.txt$", file), fread = FALSE, format = NA,
+  tz = "GMT", progbar = TRUE, ...)
 }
 \arguments{
 \item{file}{Char (vector): name(s) of the file(s) downloaded with \code{\link{dataDWD}},
@@ -15,13 +17,26 @@ e.g. "~/DWDdata/tageswerte_KL_02575_akt.zip" or
 \item{meta}{Logical (vector): is the \code{file} a meta file (Beschreibung.txt)?
 DEFAULT: TRUE for each file ending in ".txt"}
 
+\item{binary}{Logical (vector): is the \code{file} a binary file, like for the 
+radolan grid files? The argument \code{selection} (DEFAULT: NULL)
+can be used to read only a subset of the ~24*31=744 files
+(called as \code{f[selection]}).
+DEFAULT: TRUE for each file ending in ".tar.gz"}
+
+\item{raster}{Logical (vector): is the \code{file} a raster file, like for the 
+seasonal grid files? The argument \code{dividebyten} (DEFAULT: TRUE)
+can be used the devide the values by ten.
+DEFAULT: TRUE for each file ending in ".asc.gz"}
+
+\item{multia}{Logical (vector): is the \code{file} a multi_annual file?
+Overrides meta, so set to FALSE manually if meta reading 
+needs to be called on a file ending with "Standort".
+DEFAULT: TRUE for each file ending in "Standort.txt"}
+
 \item{fread}{Logical: read faster with \code{data.table::\link[data.table]{fread}}?
 For 30 daily/kl/hist files, 7 instead of 10 seconds.
 NA can also be used, which means TRUE if data.table is available.
 DEFAULT: FALSE}
-
-\item{minfo}{Logical: read the meta info txt files in the zip folder (instead of actual data)?
-Returns a named list of data.frames. DEFAULT: FALSE}
 
 \item{format}{Char (vector), only used if \code{meta=FALSE}: Format passed to
 \code{\link{as.POSIXct}} (see \code{\link{strptime}})
@@ -37,13 +52,18 @@ Coordinated). DEFAULT: "GMT"}
 \item{progbar}{Logical: present a progress bar with estimated remaining time?
 If missing and length(file)==1, progbar is internally set to FALSE.
 DEFAULT: TRUE}
+
+\item{\dots}{Further arguments passed to the underlying reading function, i.e.
+\code{\link{read.table}}, \code{data.table::\link[data.table]{fread}},
+\code{\link{read.fwf}}, \code{\link{readBin}} or
+\code{raster::\link[raster]{raster}}}
 }
 \value{
-Invisible data.frame of the desired dataset, or a list of data.frames
-        if length(file) > 1.
+Invisible data.frame of the desired dataset, 
+        or a named list of data.frames if length(file) > 1.
 }
 \description{
-Read climate (meta) data that was downloaded with \code{\link{dataDWD}}.
+Read climate data that was downloaded with \code{\link{dataDWD}}.
 The file is read, processed and returned as a data.frame.\cr
 \code{file} can be a vector with several filenames. The arguments \code{meta}
 and \code{format} can also be a vector and will be recycled to the length of \code{file}.\cr
@@ -56,7 +76,7 @@ They can then be processed with \code{dd$Stations_id <- berryFunctions::convertU
 
 }
 \seealso{
-\code{\link{dataDWD}}, \code{\link{readVars}}, \code{\link{selectDWD}}
+\code{\link{dataDWD}}, \code{\link{readVars}}, \code{\link{readMeta}}, \code{\link{selectDWD}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Jul-Oct 2016

@@ -2,10 +2,12 @@
 # Release questions, code for meta-info related functions, index updating
 
 # rdwd-package
+# dwdbase
 # release_questions
 # fileIndex, metaIndex, geoIndex
 # metaInfo
 # rowDisplay
+# DEU Map dataset
 # code to create (and update) indexes
 
 
@@ -41,12 +43,20 @@ NULL
 
 
 
+# dwdbase ----
+
+#' @title DWD FTP Server base URL
+#' @export
+#' @description base URL to DWD FTP Server / observed climatic records.\cr
+#'     \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
+dwdbase <- "ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate"
+
+
+
 # release_questions ----
 
-#' Reminders when using devtools::release
-#' 
-#' Reminders when using devtools::release. Code is in R/rdwd-package.R
-#' 
+#' @title Reminders when using devtools::release
+#' @description  Reminders when using devtools::release. Code is in R/rdwd-package.R
 #' @keywords internal
 
 release_questions <- function() {
@@ -74,11 +84,11 @@ release_questions <- function() {
 #' @aliases fileIndex metaIndex geoIndex
 #' @docType data
 #' @format
-#' \bold{fileIndex}: data.frame with character strings. ca 219k rows x 7 columns:\cr
+#' \bold{fileIndex}: data.frame with character strings. ca 243k rows x 8 columns:\cr
 #'         \code{res}, \code{var}, \code{per} (see \code{\link{selectDWD}}),
-#'         station \code{id} and time series \code{start} and \code{end}
-#'         according to \code{path}.\cr
-#' \bold{metaIndex}: data.frame with ca 60k rows for 12 columns:\cr
+#'         station \code{id}, time series \code{start} and \code{end}, and
+#'         \code{ismeta} information, all according to \code{path}.\cr
+#' \bold{metaIndex}: data.frame with ca 82k rows for 12 columns:\cr
 #'         \code{Stations_id, von_datum, bis_datum,
 #'         Stationshoehe, geoBreite, geoLaenge, Stationsname, Bundesland,
 #'         res, var, per, hasfile} \cr
@@ -182,89 +192,6 @@ return(invisible(out))
 }
 
 
-# parameter_abbreviations ---------------------------------------------------------------------
-
-#' Parameter abbreviations for data on the DWD CDC FTP server
-#' 
-#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jun 2018
-#' @seealso \code{\link{readVars}}, \code{\link{readDWD}}
-#' @keywords datasets
-#' @export
-#' @examples
-#' head(parameter_abbreviations)
-#' 
-parameter_abbreviations <- read.table(header=TRUE, strip.white=TRUE, 
-                                      stringsAsFactors=FALSE, text="
-Parameter   Kurz
-ATMO_STRAHL Atmospaerenstrahlung
-ATMO_LBERG	 Atmospaerenstrahlung_Stundensumme
-ASH_6       Ausstichsschneehoehe
-NM	         Bedeckungsgrad
-V_N        	Bedeckungsgrad
-V_S1_NS    	Bedeckungsgrad_Schicht1
-V_S2_NS    	Bedeckungsgrad_Schicht2
-V_S3_NS    	Bedeckungsgrad_Schicht3
-V_S4_NS    	Bedeckungsgrad_Schicht4
-VPM        	Dampfdruck
-V_TE002	    Erdbodentemperatur_002cm
-V_TE005	    Erdbodentemperatur_005cm
-V_TE010	    Erdbodentemperatur_010cm
-V_TE020	    Erdbodentemperatur_020cm
-V_TE002M	   Erdbodentemperatur_02cm
-V_TE050	    Erdbodentemperatur_050cm
-V_TE005M	   Erdbodentemperatur_05cm
-V_TE100	    Erdbodentemperatur_100cm
-V_TE010M	   Erdbodentemperatur_10cm
-V_TE020M	   Erdbodentemperatur_20cm
-V_TE050M	   Erdbodentemperatur_50cm
-WASH_6	     Gesamtschneewasseraequivalent
-FG_STRAHL  	Globalstrahlung
-FG_LBERG	   Globalstrahlung_Stundensumme
-FD_STRAHL  	Himmelsstrahlung_diffus
-FD_LBERG	   Himmelsstrahlung_diffus_Stundensumme
-PM	         Luftdruck
-P	          Luftdruck_NN
-P0          Luftdruck_Stationshoehe
-TMK	        Lufttemperatur
-TT_TU       Lufttemperatur
-TGK	        Lufttemperatur_5cm_min
-TXK	        Lufttemperatur_max
-TNK 	       Lufttemperatur_min
-RSKF	       Niederschlagsform
-RSF 	       Niederschlagsform
-WRTR	       Niederschlagsform
-RSK	        Niederschlagshoehe
-RS	         Niederschlagshoehe
-R1	         Niederschlagshoehe
-RS_IND	     Niederschlagsindikator
-UPM	        Relative_Feuchte
-RF_TU 	     Relative_Feuchte
-SHK_TAG    	Schneehoehe
-SH_TAG	     Schneehoehe
-WAAS_6	     Schneewasseraequivalent
-V_VV  	     Sichtweite
-SDK	        Sonnenscheindauer
-SD_STRAHL  	Sonnenscheindauer
-SD_SO	      Sonnenscheindauer
-SD_LBERG    Sonnenscheindauer_Stundensumme
-FM          Windgeschwindigkeit
-F	          Windgeschwindigkeit
-D	          Windrichtung
-FX          Windspitze
-V_S1_CSA    Wolkenart_Abk_Schicht1
-V_S2_CSA    Wolkenart_Abk_Schicht2
-V_S3_CSA    Wolkenart_Abk_Schicht3
-V_S4_CSA    Wolkenart_Abk_Schicht4
-V_S1_CS	    Wolkenart_Schicht1
-V_S2_CS	    Wolkenart_Schicht2
-V_S3_CS	    Wolkenart_Schicht3
-V_S4_CS	    Wolkenart_Schicht4
-V_S1_HHS    Wolkenhoehe_Schicht1
-V_S2_HHS    Wolkenhoehe_Schicht2
-V_S3_HHS    Wolkenhoehe_Schicht3
-V_S4_HHS    Wolkenhoehe_Schicht4
-
-")
 
 # rowDisplay ---------------------------------------------------------------------
 
@@ -311,8 +238,6 @@ apply(x, MARGIN=1, perrow)
 
 
 
-
-
 # update Indexes ---------------------------------------------------------------
 
 if(FALSE){
@@ -321,14 +246,16 @@ dwdfiles <- indexFTP(dwdfiles, sleep=2, filename="", overwrite=TRUE)
   # potentially needed several times with small sleep values on restrictive FTP servers
 
 # delete meta folder for truly new data
-# check for dupliate description files (Monatwerte + Monatswerte, e.g., also in INDEX_OF.txt)
+# check for duplicate description files (Monatwerte + Monatswerte, e.g., also in INDEX_OF.txt)
 
 
 dwdfiles <- readLines("DWDdata/INDEX_of_DWD_.txt") 
 #  25'757 elements (2017-03-14) 
 # 218'593 (2018-03-25)
 # 228'830 (2018-11-26)
-index <- createIndex(paths=dwdfiles, meta=TRUE) # ca 70 secs +30 if files are not yet downloaded
+# 240'737 (2019-02-19)
+# 242'584 (2019-03-11)
+index <- createIndex(paths=dwdfiles, meta=TRUE) # ca 70 secs +40 if files are not yet downloaded
 { # save indexes into package:
 fileIndex <- index[[1]]
 metaIndex <- index[[2]]
@@ -338,12 +265,13 @@ message("saving index rda files...")
 save(fileIndex, file="data/fileIndex.rda")
 save(metaIndex, file="data/metaIndex.rda")
 save( geoIndex, file="data/geoIndex.rda")
-message("compressing files...")
+message("compressing files:")
 tools::resaveRdaFiles("data/fileIndex.rda") #devtools::use_data(fileIndex, internal=TRUE)
-cat(".")
+cat("1")
 tools::resaveRdaFiles("data/metaIndex.rda")
-cat(".")
+cat("2")
 tools::resaveRdaFiles("data/geoIndex.rda")
+cat("3\n")
 message("checking files...")
 # check writing and reading of the files:
 fileIndex2 <- read.table("DWDdata/fileIndex.txt", sep="\t", header=TRUE, colClasses="character")

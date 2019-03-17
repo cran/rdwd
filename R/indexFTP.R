@@ -29,20 +29,21 @@
 #' @export
 #' @examples
 #' \dontrun{ ## Needs internet connection
-#' sol <- indexFTP(folder="/daily/solar")
+#' sol <- indexFTP(folder="/daily/solar", dir=tempdir())
 #' head(sol)
 #' 
-#' mon <- indexFTP(folder="/monthly/kl", verbose=TRUE)
+#' # mon <- indexFTP(folder="/monthly/kl", dir=tempdir(), verbose=TRUE)
 #' }
 #' 
 #' @param folder  Folder(s) to be indexed recursively, e.g. "/hourly/wind/".
 #'                Use \code{folder=""} to search at the location of \code{base} itself.
 #'                If code{folder} is "currentfindex" (the default) and \code{base} 
 #'                is the default, code{folder} is changed to all folders in current 
-#'                \code{\link{fileIndex}}: \code{unique(dirname(fileIndex$path))}. 
-#'                DEFAULT: "currentfindex"
-#' @param base    Main directory of DWD ftp server, defaulting to observed climatic records.
-#'                DEFAULT: \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
+#'                \code{\link{fileIndex}}: \code{unique(dirname(fileIndex$path))}.
+#'                Leading slashes will be removed. DEFAULT: "currentfindex"
+#' @param base    Main directory of FTP server, defaulting to DWD observed climatic records.
+#'                Trailing slashes will be removed. DEFAULT: \code{\link{dwdbase}}:
+#'                \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
 #' @param is.file.if.has.dot Logical: if some of the input paths contain a dot, 
 #'                treat those as files, i.e. do not try to read those as if they
 #'                were a folder. Only set this to FALSE if you know what you're doing.
@@ -66,7 +67,7 @@
 #' 
 indexFTP <- function(
 folder="currentfindex",
-base="ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate",
+base=dwdbase,
 is.file.if.has.dot=TRUE,
 sleep=0,
 dir="DWDdata",
@@ -82,9 +83,13 @@ if(!requireNamespace("RCurl", quietly=TRUE))
   stop("The R package 'RCurl' is not available. rdwd::indexFTP can not obtain file list.\n",
        "install.packages('RCurl')       to enable this.")
 # change folder:
-if(all(folder=="currentfindex") & base=="ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate")
+if(all(folder=="currentfindex") & base==dwdbase)
+   {
    folder <- unique(dirname(fileIndex$path))
-if(base!="ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate")
+   # exclude 1min/prec/hist if the subfolders are already in folder:
+   folder <- folder[folder != "/1_minute/precipitation/historical"]
+   }
+if(base!=dwdbase)
  if(missing(folder)) warning('base is not the rdwd default. It is likely you want',
                              ' to use folder="" instead of "',folder,'".')
 # Progress bar?
@@ -92,6 +97,9 @@ if(progbar) lapply <- pbapply::pblapply
 # single RCurl handle for all FTP requests:
 curl_handle <- RCurl::getCurlHandle(ftp.use.epsv=TRUE)
 
+# remove trailing slashes in base and leading slashes in folder:
+while(grepl("/$", base)) base <- sub("/$", "", base)
+while(any(grepl("^/", folder))) folder <- sub("^/","",folder) 
 
 # central object: df_ff (dataframe with file/folder names)
 df_ff <- data.frame(path=folder, isfile=FALSE, stringsAsFactors=FALSE)
@@ -141,6 +149,7 @@ stoppp_ffe <- FALSE
 # as long as df_ff contains folders, run the following:
 while(any(!df_ff$isfile))           # potential ToDo: exclude previously checked empty folders
   {
+  df_ff <- unique(df_ff)
   df_ff1 <- df_ff[df_ff$isfile,] # these are finished
   df_ff2 <- df_ff[!df_ff$isfile,]
   df_ff3 <- lapply(1:nrow(df_ff2), function(r) getURL_ffe(df_ff2[r,])) # for the folders, run getURL
