@@ -4,18 +4,20 @@
 \alias{dataDWD}
 \title{Download data from the DWD CDC FTP Server}
 \usage{
-dataDWD(file, base = dwdbase, dir = "DWDdata", force = FALSE,
-  overwrite = FALSE, sleep = 0, quiet = FALSE, progbar = !quiet,
-  browse = FALSE, read = TRUE, meta = grepl(".txt$", file),
-  fread = FALSE, format = NA, ntrunc = 2, dfargs = NULL, ...)
+dataDWD(file, base = dwdbase, joinbf = FALSE, dir = "DWDdata",
+  force = FALSE, overwrite = FALSE, sleep = 0, quiet = FALSE,
+  progbar = !quiet, browse = FALSE, read = TRUE, ntrunc = 2,
+  dfargs = NULL, ...)
 }
 \arguments{
 \item{file}{Char (vector): complete file URL(s) (including base and filename.zip) as returned by
 \code{\link{selectDWD}}. Can be a vector with several filenames.}
 
 \item{base}{Single char: base URL that will be removed from output file names.
-DEFAULT: \code{\link{dwdbase}}:
-\url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}}
+DEFAULT: \code{\link{dwdbase}}}
+
+\item{joinbf}{Logical: paste \code{base} and \code{file} together? 
+DEFAULT: FALSE (selectDWD returns complete URLs already)}
 
 \item{dir}{Char: Writeable directory name where to save the downloaded file.
 Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}}
@@ -45,21 +47,14 @@ DEFAULT: FALSE}
 \item{read}{Logical: read the file(s) with \code{\link{readDWD}}? If FALSE,
 only download is performed and the filename(s) returned. DEFAULT: TRUE}
 
-\item{meta}{Logical (vector): is the \code{file} a meta file? Passed to
-\code{\link{readDWD}}. DEFAULT: TRUE for each file ending in ".txt"}
-
-\item{fread}{Fast reading? See \code{\link{readDWD}}. DEFAULT: FALSE}
-
-\item{format}{Char (vector): format used in \code{\link{strptime}} to convert date/time column,
-see \code{\link{readDWD}}. DEFAULT: NA}
-
 \item{ntrunc}{Single integer: number of filenames printed in messages
 before they get truncated with message "(and xx more)". DEFAULT: 2}
 
 \item{dfargs}{Named list of additional arguments passed to \code{\link{download.file}}}
 
-\item{\dots}{Further arguments passed to \code{\link{readDWD}}. 
-Were passed to \code{\link{download.file}} prior to rdwd 0.11.7 (2019-02-25)}
+\item{\dots}{Further arguments passed to \code{\link{readDWD}}, 
+like fread, varnames etc. Dots were passed to 
+\code{\link{download.file}} prior to rdwd 0.11.7 (2019-02-25)}
 }
 \value{
 Presuming downloading and processing were successful:
@@ -85,13 +80,13 @@ fname <- dataDWD(link, dir=tempdir(), read=FALSE) ; fname
 # unless force=TRUE, already obtained files will not be downloaded again
 
 # read and plot file:
-wind <- readDWD(fname)          ; head(wind)
-metafiles <- readMeta(fname)    ; str(metafiles, max.level=1)
-column_names <- readVars(fname) ; head(column_names)
+wind <- readDWD(fname, varnames=TRUE) ; head(wind)
+metafiles <- readMeta(fname)          ; str(metafiles, max.level=1)
+column_names <- readVars(fname)       ; head(column_names)
 
 plot(wind$MESS_DATUM, wind$F, main="DWD hourly wind Fuerstenzell", col="blue",
      xaxt="n", las=1, type="l", xlab="Date", ylab="Hourly Wind speed  [m/s]")
-berryFunctions::monthAxis(1, ym=T)
+berryFunctions::monthAxis(1)
 
 
 # current and historical files:
@@ -108,9 +103,8 @@ potsdam <- potsdam[!duplicated(potsdam$MESS_DATUM),]
 #links <- selectDWD(res="daily", var="solar")
 #sol <- dataDWD(links, sleep=20) # random waiting time after download (0 to 20 secs)
 
-# Real life example with data completeness check etc:
-browseURL("https://github.com/brry/prectemp/blob/master/Code_analysis.R")
-
+# Real life examples can be found in the use cases vignette:
+vignette("cases")
 }
 
 }

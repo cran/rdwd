@@ -1,31 +1,31 @@
-#' Create a recursive index of the DWD CDC FTP Server
+#' Create a recursive index of an FTP Server
 #' 
-#' Create a list of all the files (in subfolders) at the Climate Data Center (CDC)
-#' FTP-Server from the German Weather Service (DWD, Deutscher WetterDienst) at
-#' \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}.\cr\cr
+#' Create a list of all the files (in all subfolders) of an FTP server.
+#' Defaults to the German Weather Service (DWD, Deutscher WetterDienst) OpenData server at
+#' \url{ftp://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/}.\cr\cr
 #' The R package \code{RCurl} must be available to do this.
 #' If \code{RCurl::\link[RCurl]{getURL}} fails, usually because bot access is
 #' detected and denied, there will still be an output which you can pass in a
 #' second run via \code{folder} to extract the remaining dirs.
 #' You might want to wait a bit and set \code{sleep} to a higher value in that case. 
 #' Here's an example:\cr
-#' \code{gridindex <- indexFTP("grids_germany","ftp://ftp-cdc.dwd.de/pub/CDC")}\cr
-#' \code{gridindex <- indexFTP(gridindex,"ftp://ftp-cdc.dwd.de/pub/CDC", sleep=1)}\cr
+#' \code{gridindex <- indexFTP("", gridbase)}\cr
+#' \code{gridindex <- indexFTP(gridindex, gridbase, sleep=1)}\cr
 #' 
 #' @details
 #' It's not suggested to run this for all folders, as it can take quite some time
 #' and you may get kicked off the FTP-Server. This package contains an index
-#' of the climatic observations at weather stations: \code{View(rdwd:::\link{fileIndex})}
+#' of the climatic observations at weather stations: \code{View(rdwd:::\link{fileIndex})}.
 #' If it is out of date, please let me know!
 #' 
-#' @return currently a vector with file paths (output may change in the future)
+#' @return a vector with file paths
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct 2016
-# @seealso \code{\link{metaDWD}}, \code{\link{dataDWD}}, \code{\link{readDWD}}
+#' @seealso \code{\link{createIndex}}
 #' @keywords file
 #' @importFrom stats runif
 #' @importFrom pbapply pblapply
-#' @importFrom utils write.table
-#' @importFrom berryFunctions removeSpace traceCall newFilename
+#' @importFrom utils write.table read.table
+#' @importFrom berryFunctions removeSpace traceCall newFilename truncMessage
 #' @export
 #' @examples
 #' \dontrun{ ## Needs internet connection
@@ -36,14 +36,16 @@
 #' }
 #' 
 #' @param folder  Folder(s) to be indexed recursively, e.g. "/hourly/wind/".
+#'                Leading slashes will be removed. 
 #'                Use \code{folder=""} to search at the location of \code{base} itself.
-#'                If code{folder} is "currentfindex" (the default) and \code{base} 
-#'                is the default, code{folder} is changed to all folders in current 
-#'                \code{\link{fileIndex}}: \code{unique(dirname(fileIndex$path))}.
-#'                Leading slashes will be removed. DEFAULT: "currentfindex"
-#' @param base    Main directory of FTP server, defaulting to DWD observed climatic records.
-#'                Trailing slashes will be removed. DEFAULT: \code{\link{dwdbase}}:
-#'                \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
+#'                If \code{folder} is "currentfindex" (the default) and \code{base} 
+#'                is the default, code{folder} is changed to all observational 
+#'                folders listed in the current tree file at 
+#'                \url{ftp://opendata.dwd.de/weather/tree.html}. With "currentgindex" 
+#'                and \code{gridbase}, the grid folders in the tree are used.
+#'                DEFAULT: "currentfindex"
+#' @param base    Main directory of FTP server. Trailing slashes will be removed. 
+#'                DEFAULT: \code{\link{dwdbase}}
 #' @param is.file.if.has.dot Logical: if some of the input paths contain a dot, 
 #'                treat those as files, i.e. do not try to read those as if they
 #'                were a folder. Only set this to FALSE if you know what you're doing.
@@ -60,8 +62,7 @@
 #'                filename, see \code{berryFunctions::\link[berryFunctions]{newFilename}}.
 #'                DEFAULT: FALSE
 #' @param quiet   Suppress progbars and message about directory/files? DEFAULT: FALSE
-#' @param progbar Logical: present a progress bar in each level?
-#'                Only works if the R package pbapply is available. DEFAULT: TRUE
+#' @param progbar Logical: present a progress bar in each level? DEFAULT: TRUE
 #' @param verbose Logical: write a lot of messages from \code{RCurl::\link[RCurl]{getURL}}?
 #'                DEFAULT: FALSE (usually, you dont need all the curl information)
 #' 
@@ -83,12 +84,24 @@ if(!requireNamespace("RCurl", quietly=TRUE))
   stop("The R package 'RCurl' is not available. rdwd::indexFTP can not obtain file list.\n",
        "install.packages('RCurl')       to enable this.")
 # change folder:
-if(all(folder=="currentfindex") & base==dwdbase)
-   {
-   folder <- unique(dirname(fileIndex$path))
-   # exclude 1min/prec/hist if the subfolders are already in folder:
-   folder <- folder[folder != "/1_minute/precipitation/historical"]
-   }
+if(all(folder %in% c("currentfindex","currentgindex")) & base %in% c(dwdbase, gridbase))
+  {
+  if(!quiet) message("Reading current index tree file...")
+  tree <- readLines("ftp://opendata.dwd.de/weather/tree.html")
+  if(!quiet) message("Processing index tree file...")
+  urlpart <- "\"https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/"
+  if(folder=="currentgindex") 
+     urlpart <- sub("observations_germany/climate", "grids_germany", urlpart)
+  tree <- grep(urlpart, tree, value=TRUE)
+  tree <- sapply(strsplit(tree, "href="), "[", 2)
+  tree <- sub(urlpart, "/", tree)
+  tree <- sapply(strsplit(tree, "/\""), "[", 1)
+  tree <- tree[-1]
+  # Remove intermediate folders:
+  tree <- tree[!tree %in% dirname(tree)]
+  folder <- tree
+  }
+if(!quiet) message("Determining the content of the ",length(folder)," folder(s)...")
 if(base!=dwdbase)
  if(missing(folder)) warning('base is not the rdwd default. It is likely you want',
                              ' to use folder="" instead of "',folder,'".')
@@ -123,8 +136,10 @@ getURL_ffe <- function(ff_row)
      if(grepl("Could not resolve host", p)) 
        p <- paste0(p,"\nThis may mean you are not connected to the internet.")
      if(grepl("Server denied you to change to the given directory", p)) 
-       p <- paste0(p,"\nThis could mean the path is a file, not a folder.")
-     msg <- paste0(traceCall(3, "", ": "), "RCurl::getURL failed for '", ff_row$path, "/' - ", p)
+       p <- paste0(p,"\nThis could mean the path is a file, not a folder",
+                   " or that it doesn't exist at base\n", base)
+     msg <- paste0(traceCall(3, "", ": "), "RCurl::getURL failed for '", 
+                   ff_row$path, "/' with error:\n - ", p)
      warning(msg, call.=FALSE)
      assign("stoppp_ffe", TRUE, inherits=TRUE) # to get out of the loop sans error
      return(ff_row) # exit getURL_ffe

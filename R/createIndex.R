@@ -21,11 +21,11 @@
 #' @export
 #' @examples
 #' \dontrun{ # Not tested with R CMD check because of file writing
-#' link <- "/daily/kl/historical/tageswerte_00699_19490101_19580630_hist.zip"
+#' link <- "daily/kl/historical/tageswerte_00699_19490101_19580630_hist.zip"
 #' ind <- createIndex(link, dir=tempdir())
 #' ind
-#' link2 <- "/daily/kl/historical/KL_Tageswerte_Beschreibung_Stationen.txt"
-#' link3 <- "/daily/kl/recent/KL_Tageswerte_Beschreibung_Stationen.txt"
+#' link2 <- "daily/kl/historical/KL_Tageswerte_Beschreibung_Stationen.txt"
+#' link3 <- "daily/kl/recent/KL_Tageswerte_Beschreibung_Stationen.txt"
 #' ind2 <- createIndex(c(link,link2,link3), dir=tempdir(), meta=TRUE)
 #' lapply(ind2, head)
 #' }
@@ -38,8 +38,7 @@
 #' @param paths Char: vector of DWD paths returned by \code{\link{indexFTP}} called
 #'              with the same \code{base} value as this function
 #' @param base  Main directory of DWD ftp server, defaulting to observed climatic records.
-#'              DEFAULT: \code{\link{dwdbase}}:
-#'              \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
+#'              DEFAULT: \code{\link{dwdbase}}
 #' @param dir   Char: writeable directory name where to save the main output(s).
 #'              Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}
 #' @param fname Char: Name of file in \code{dir} in which to write \code{\link{fileIndex}}.
@@ -162,7 +161,7 @@ if(sum(sel)<2) stop(traceCall(1, "in ", ": "),
               "There need to be at least two 'Beschreibung' files. (There is ",
               sum(sel),")", call.=FALSE)
 # download and read those files:
-metas <- dataDWD(paste0(base,fileIndex[sel, "path"]), dir=metadir, ...)
+metas <- dataDWD(fileIndex[sel, "path"], base=base, joinbf=TRUE, dir=metadir, ...)
 for(i in seq_along(metas))
   {
   metas[[i]]$res <- fileIndex[sel, "res"][i]
@@ -258,28 +257,6 @@ geoIndex$hasfile <- NULL
 # reduction into unique stations:
 geoIndex <- geoIndex[!duplicated(geoIndex), ]  #  ca 6k rows (=unique station IDs)
 #
-#
-# Duplication checks:
-dupli <- list(name=paste("rdwd::createIndex coordinate checks", Sys.time()))
-coord <- paste(geoIndex$lon, geoIndex$lat, sep="_")
-# stations at the same locations:
-dupli_c <- duplicated(coord) | duplicated(coord, fromLast=TRUE)
-if(any(dupli_c))
-  {
-  warning("There are ", sum(dupli_c)/2, " sets of coordinates used for more than ",
-          "one station id.\nTo see them, type    .Last.value$dupli")
-  dupli$ids_at_one_loc <- sortDF(geoIndex[dupli_c, ], "lon", decreasing=FALSE)
-  }
-# several locations for one station ID:
-dupli_c <- tapply(coord, geoIndex$id, function(x)length(unique(x)) ) > 1
-if(any(dupli_c))
-  {
-  warning("There are ", sum(dupli_c), " stations with more than one set of coordinates.",
-          "\nTo see them, type    .Last.value$dupli")
-  dupli$locs_at_one_id <- geoIndex[dupli_c, ]
-  }
-#
-#
 # column for interactive map popup display:
 geoIndex$display <- rowDisplay(geoIndex)
 geoIndex$display <- gsub("nfiles", "n public files", geoIndex$display)
@@ -295,10 +272,13 @@ if(gname!="")
   write.table(geoIndex, file=outfile, sep="\t", row.names=FALSE, quote=FALSE)
   }
 #
+# Check all indexes:
+checks <- checkIndex(fileIndex, metaIndex, geoIndex, fast=TRUE)
 #
 # Output -----------------------------------------------------------------------
 if(!quiet) messaget("Done.")
-return(invisible(list(fileIndex=fileIndex, metaIndex=metaIndex, geoIndex=geoIndex, dupli=dupli)))
+return(invisible(list(fileIndex=fileIndex, metaIndex=metaIndex, geoIndex=geoIndex, 
+                      checks=checks)))
 }
 
 

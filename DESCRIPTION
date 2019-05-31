@@ -1,8 +1,8 @@
 Package: rdwd
 Title: Select and Download Climate Data from 'DWD' (German Weather
         Service)
-Version: 1.0.0
-Date: 2019-03-17
+Version: 1.1.0
+Date: 2019-05-30
 Depends: R(>= 2.10)
 SystemRequirements: Pandoc (>= 1.12.3), pandoc-citeproc
 Imports: berryFunctions (>= 1.17.0), pbapply
@@ -19,7 +19,7 @@ URL: https://github.com/brry/rdwd
 RoxygenNote: 6.1.1
 VignetteBuilder: R.rsp
 BugReports: https://github.com/brry/rdwd/issues
-NeedsCompilation: no
-Packaged: 2019-03-17 21:50:05 UTC; Berry
+NeedsCompilation: yes
+Packaged: 2019-05-30 21:50:44 UTC; Berry
 Repository: CRAN
-Date/Publication: 2019-03-17 22:10:03 UTC
+Date/Publication: 2019-05-31 08:50:03 UTC

@@ -1,13 +1,16 @@
 # rdwd
 `rdwd` is an [R](https://www.r-project.org/) package to select, download and read climate data from the 
 German Weather Service (Deutscher Wetterdienst, DWD).
-They provide over 228 thousand datasets with weather observations online at 
-<ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate>.
+They provide thousands of datasets with weather observations online at  
+<ftp://opendata.dwd.de/climate_environment/CDC/observations_germany/climate>  
+Since May 2019, `rdwd` also supports reading the Radolan (binary) raster data at  
+<ftp://opendata.dwd.de/climate_environment/CDC/grids_germany>
 
 `rdwd` is available on CRAN:
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version-last-release/rdwd)](https://cran.r-project.org/package=rdwd) 
 [![downloads](http://cranlogs.r-pkg.org/badges/rdwd)](https://www.r-pkg.org/services)
 [![Rdoc](http://www.rdocumentation.org/badges/version/rdwd)](https://www.rdocumentation.org/packages/rdwd)
+!["rdwd dependencies"](https://tinyverse.netlify.com/badge/rdwd)
 
 It has been presented at [FOSDEM 2017](https://fosdem.org/2017/schedule/event/geo_weather/)
 and [UseR!2017](https://user2017.sched.com/event/Axr3/rdwd-manage-german-weather-observations) in Brussels,
@@ -19,7 +22,8 @@ Usage of the package usually looks something like the following:
 ```R
 # download and install the rdwd package (only needed once):
 install.packages("rdwd")
-berryFunctions::instGit("brry/rdwd") # latest development version (if wanted)
+# if wanted, latest development version, incl. vignettes:
+remotes::install_github("brry/rdwd", build_opts="--no-manual")
 
 # load the package into library (needed in every R session):
 library(rdwd)
@@ -31,29 +35,29 @@ link <- selectDWD("Potsdam", res="daily", var="kl", per="recent")
 file <- dataDWD(link, read=FALSE)
 
 # Read the file from the zip folder:
-clim <- readDWD(file)
+clim <- readDWD(file, varnames=TRUE)
 
 # Inspect the data.frame:
 str(clim)
 ```
 
 You can also select datasets with the [interactive map](https://cran.r-project.org/package=rdwd/vignettes/mapDWD.html).  
-Installation instructions and more examples are available in the [package vignette](https://cran.r-project.org/package=rdwd/vignettes/rdwd.html).
+A general introduction to `rdwd` is available in the [package vignette](https://cran.r-project.org/package=rdwd/vignettes/rdwd.html).  
+Long actual-usage examples can be found in the [use cases vignette](https://cran.r-project.org/package=rdwd/vignettes/cases.html).
 
 ```R
 vignette("mapDWD") # interactive map, likely faster than CRAN link above
 vignette("rdwd")   # package instructions and examples
+vignette("cases")  # longer use case examples
 ```
 
-A real-life usage example of the package can be found at
-<https://github.com/brry/prectemp/blob/master/Code_analysis.R>
 
 # help
-I'm looking for someone to help implement multiple downloads in [dataDWD](https://github.com/brry/rdwd/blob/master/R/dataDWD.R#L167) via e.g. `curl` or `wget`.
+I'm looking for someone to help implement multiple downloads in [dataDWD](https://github.com/brry/rdwd/blob/master/R/dataDWD.R#L176) via e.g. `curl` or `wget`.
 The requirements are as follows:
 
 * works cross-platform
 * is called from R
 * has as few dependencies as possible
+* does not fail completely at a single failure, e.g. can be called within `try` 
 * optimally enables a progress bar
-

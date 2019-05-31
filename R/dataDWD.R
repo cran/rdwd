@@ -35,13 +35,13 @@
 #' # unless force=TRUE, already obtained files will not be downloaded again
 #' 
 #' # read and plot file:
-#' wind <- readDWD(fname)          ; head(wind)
-#' metafiles <- readMeta(fname)    ; str(metafiles, max.level=1)
-#' column_names <- readVars(fname) ; head(column_names)
+#' wind <- readDWD(fname, varnames=TRUE) ; head(wind)
+#' metafiles <- readMeta(fname)          ; str(metafiles, max.level=1)
+#' column_names <- readVars(fname)       ; head(column_names)
 #' 
 #' plot(wind$MESS_DATUM, wind$F, main="DWD hourly wind Fuerstenzell", col="blue",
 #'      xaxt="n", las=1, type="l", xlab="Date", ylab="Hourly Wind speed  [m/s]")
-#' berryFunctions::monthAxis(1, ym=T)
+#' berryFunctions::monthAxis(1)
 #' 
 #' 
 #' # current and historical files:
@@ -58,16 +58,16 @@
 #' #links <- selectDWD(res="daily", var="solar")
 #' #sol <- dataDWD(links, sleep=20) # random waiting time after download (0 to 20 secs)
 #' 
-#' # Real life example with data completeness check etc:
-#' browseURL("https://github.com/brry/prectemp/blob/master/Code_analysis.R")
-#' 
+#' # Real life examples can be found in the use cases vignette:
+#' vignette("cases")
 #' }
 #' 
 #' @param file   Char (vector): complete file URL(s) (including base and filename.zip) as returned by
 #'               \code{\link{selectDWD}}. Can be a vector with several filenames.
 #' @param base   Single char: base URL that will be removed from output file names.
-#'               DEFAULT: \code{\link{dwdbase}}:
-#'               \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
+#'               DEFAULT: \code{\link{dwdbase}}
+#' @param joinbf Logical: paste \code{base} and \code{file} together? 
+#'               DEFAULT: FALSE (selectDWD returns complete URLs already)
 #' @param dir    Char: Writeable directory name where to save the downloaded file.
 #'               Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}
 #' @param force  Logical (vector): always download, even if the file already exists in \code{dir}?
@@ -88,20 +88,17 @@
 #'               DEFAULT: FALSE
 #' @param read   Logical: read the file(s) with \code{\link{readDWD}}? If FALSE,
 #'               only download is performed and the filename(s) returned. DEFAULT: TRUE
-#' @param meta   Logical (vector): is the \code{file} a meta file? Passed to
-#'               \code{\link{readDWD}}. DEFAULT: TRUE for each file ending in ".txt"
-#' @param fread  Fast reading? See \code{\link{readDWD}}. DEFAULT: FALSE
-#' @param format Char (vector): format used in \code{\link{strptime}} to convert date/time column,
-#'               see \code{\link{readDWD}}. DEFAULT: NA
 #' @param ntrunc Single integer: number of filenames printed in messages
 #'               before they get truncated with message "(and xx more)". DEFAULT: 2
 #' @param dfargs Named list of additional arguments passed to \code{\link{download.file}}
-#' @param \dots  Further arguments passed to \code{\link{readDWD}}. 
-#'               Were passed to \code{\link{download.file}} prior to rdwd 0.11.7 (2019-02-25)
+#' @param \dots  Further arguments passed to \code{\link{readDWD}}, 
+#'               like fread, varnames etc. Dots were passed to 
+#'               \code{\link{download.file}} prior to rdwd 0.11.7 (2019-02-25)
 #
 dataDWD <- function(
 file,
 base=dwdbase,
+joinbf=FALSE,
 dir="DWDdata",
 force=FALSE,
 overwrite=FALSE,
@@ -110,9 +107,6 @@ quiet=FALSE,
 progbar=!quiet,
 browse=FALSE,
 read=TRUE,
-meta=grepl('.txt$', file),
-fread=FALSE,
-format=NA,
 ntrunc=2,
 dfargs=NULL,
 ...
@@ -120,6 +114,9 @@ dfargs=NULL,
 {
 if(!is.atomic(file)) stop("file must be a vector, not a ", class(file))
 if(!is.character(file)) stop("file must be char, not ", class(file))
+base <- sub("/$","",base) # remove accidental trailing slash
+file <- sub("^/","",file) # remove accidental leading slash
+if(joinbf)  file <- paste0(base,"/",file)
 if(missing(progbar) & length(file)==1) progbar <- FALSE
 if(any(file==""))
 {
@@ -191,21 +188,17 @@ if(any(iserror))
                 " failed (out of ",length(iserror),").", 
                 if(read)" Setting read=FALSE.","\n")
   read <- FALSE
-  if(any(substr(file[iserror], 1, 4) != "ftp:"))
-     msg <- paste0(msg, "dataDWD needs urls starting with 'ftp://'.\n")
   msg <- paste0(msg, "download.file error",if(ne>1) "s",":\n")
   msg2 <- sapply(dl_results[iserror], function(e)attr(e,"condition")$message)
+  if(any(substr(file[iserror], 1, 4) != "ftp:"))
+     msg2 <- paste0(msg2, "\ndataDWD needs urls starting with 'ftp://'.")
   msg <- paste0(msg, paste(msg2, collapse="\n"))
   warning(msg, call.=FALSE)
   }
 # ------------------------------------------------------------------------------
 # Output: Read the file or outfile name:
 output <- outfile
-if(read)
-  {
-  if(progbar) message("Reading ", length(outfile), " file", if(length(outfile)>1)"s", "...")
-  output <- readDWD(file=outfile, meta=meta, fread=fread, format=format, progbar=progbar, ...)
-  }
+if(read) output <- readDWD(file=outfile, progbar=progbar, ...)
 # output:
 return(invisible(output))
 }

@@ -22,8 +22,7 @@
 #' Then selectDWD will return the name of the station description file at \bold{path}.
 #' This is why case 3 with \code{meta=FALSE} only returns the data file names (ending in .zip).\cr\cr\cr
 #' The following folders in \bold{\code{res/var/per}} notation
-#' (resolution/variable/period) are available at
-#' \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate/}\cr
+#' (resolution/variable/period) are available at \code{\link{dwdbase}}:\cr
 #' "<" signifies a split into the folders \code{per} = "recent" and "historical".\cr
 #' "<<" signifies a split into the folders \code{per} = "now", recent", "historical" and "meta_data".\cr
 #' "-" signifies that there are no further sub-folders. \cr
@@ -38,6 +37,7 @@
 #' extreme_wind <<        \tab |                    \tab |                    \tab |               \tab |               \cr
 #'                        \tab | cloudiness <       \tab |                    \tab |               \tab |               \cr
 #'                        \tab | cloud_type <       \tab |                    \tab |               \tab |               \cr
+#'                        \tab | dew_point <        \tab |                    \tab |               \tab |               \cr
 #' precipitation <<       \tab | precipitation <    \tab |                    \tab |               \tab |               \cr
 #'                        \tab | pressure <         \tab |                    \tab |               \tab |               \cr
 #'                        \tab | soil_temperature < \tab | soil_temperature < \tab |               \tab |               \cr
@@ -46,6 +46,7 @@
 #'                        \tab | visibility <       \tab |                    \tab |               \tab |               \cr
 #'                        \tab |                    \tab | water_equiv <      \tab |               \tab |               \cr
 #' wind <<                \tab | wind <             \tab |                    \tab |               \tab |               \cr
+#'                        \tab | wind_synop <       \tab |                    \tab |               \tab |               \cr
 #' }
 #' Please note that \code{1_minute/precipitation/historical} has subfolders for each year.
 #' \tabular{lll}{
@@ -56,8 +57,13 @@
 #'                  \tab | mean_71-00 - \tab |                   \cr
 #'                  \tab | mean_81-10 - \tab |                   \cr
 #'                  \tab |              \tab | air_temperature < \cr
+#'                  \tab |              \tab | cloudiness <      \cr
+#'                  \tab |              \tab | moisture <        \cr
 #'                  \tab |              \tab | pressure <        \cr
+#'                  \tab |              \tab | soil <            \cr
 #'                  \tab |              \tab | standard_format - \cr
+#'                  \tab |              \tab | visibility <      \cr
+#'                  \tab |              \tab | wind <            \cr
 #' }
 #' 
 #' @return Character string with file path and name(s) in the format
@@ -127,10 +133,9 @@
 #' @param id    Char/Number: station ID with or without leading zeros, e.g. "00614" or 614.
 #'              Is internally converted to an integer, because some DWD meta data
 #'              files also contain no leading zeros. DEFAULT: findID(name, exaxtmatch, mindex)
-#' @param base  Single char: main directory of DWD ftp server, defaulting to
-#'              observed climatic records (\code{\link{dwdbase}}).
+#' @param base  Single char: main directory of DWD ftp server.
 #'              Must be the same \code{base} used to create \code{findex}.
-#'              DEFAULT: \url{ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate}
+#'              DEFAULT: \code{\link{dwdbase}}
 #' @param findex Single object: Index used to select filename, as returned by
 #'              \code{\link{createIndex}}.To use a current / custom index, use
 #'              \code{myIndex <- createIndex(indexFTP("/daily/solar"))}
@@ -190,36 +195,12 @@ if(any(per=="hr"|per=="rh", na.rm=TRUE))
   per[per=="rh"] <- "r"
   rm(i)
   }
-# res/var/per interactive selection:
-selectPrompt <- function(question, column, res="", var="", index=findex)
- {
- if(all(var=="solar" & res %in% c("hourly","daily"))) return("")
- question <- paste("Which of the following", question, "would you like to use?")
- options <- index[,column]
- if(any(res!=""))
-   options <- index[index$res %in% res, column]
- if(any(var!=""))
-  options <- index[index$res %in% res & index$var %in% var, column]
- options <- sort(unique(options))
- if("hourly" %in% options) # order resolution manually:
-   {
-   names(options) <- options
-   ord <- c("1_minute","10_minutes","hourly","subdaily","daily","monthly","annual")
-   ord <- c(ord, options[!options %in% ord]) # potentially further resolutions
-   options <- options[ord]
-   names(options) <- NULL
-   }
- #options <- c(options, "''")
- sel <- menu(options, title=question)
- if(sel==0) return("")
- options[sel]
-}
-if(anyNA(res)) res[is.na(res)] <- selectPrompt("resolutions", "res")
-if(anyNA(var)) var[is.na(var)] <- selectPrompt("variables",   "var", res=res)
-if(anyNA(per)) per[is.na(per)] <- selectPrompt("periods",     "per", res=res, var=var)
-# 
+#
 # recycle input vectors
 len <- max(length(id), length(res), length(var), length(per), length(meta)  )
+lmin <-  c(length(id), length(res), length(var), length(per), length(meta)  )
+if(any(lmin==0)) stop(sum(lmin==0), " input vectors have length zero: ", 
+                      toString(c("id","res","var","per","meta")[lmin==0]))
 # outside of the loop, the slowest part of the code is getting length(id)
 # because findID obtains id from name. All computing time happens in tolower
 if(len>1)
@@ -239,6 +220,17 @@ per[substr(per,1,1)=="r"] <- "recent"
 # solar per to ""
 per[var=="solar" & res %in% c("hourly","daily")] <- ""
 per[var=="standard_format" & res=="subdaily"] <- ""
+# multiannual data has no id, remove if given:
+rma <- res=="multi_annual"
+if(any(rma))
+  {
+  if(any(id[rma]!="")) warning(traceCall(1, "", ": "), "multi_annual data is not ", 
+      "organized by station ID. Setting id to ''.", call.=FALSE)
+  id[rma] <- ""
+  if(any(per[rma]!="")) warning(traceCall(1, "", ": "), "multi_annual data is not ", 
+      "organized in period folders. Setting per to ''.", call.=FALSE)
+  per[rma] <- ""
+  }
 # check ids for accidental letters:
 idlett <- grepl("[A-Za-z]", id)
 if(any(idlett)) stop(traceCall(1, "in ", ": "), "id may not contain letters: ",
@@ -256,6 +248,47 @@ if(current)
 # convert ID to integer:
 id <- suppressWarnings(as.integer(id))
 #
+# res/var/per interactive selection:
+selectPrompt <- function(column, RES="", VAR="", PER="", ID="", index=findex)
+ {
+ # input arguments capitalized to avoid restarting interrupted promise evaluation
+  ID[is.na(ID )] <- ""
+ RES[is.na(RES)] <- ""
+ VAR[is.na(VAR)] <- ""
+ PER[is.na(PER)] <- ""
+ if(all(VAR=="solar" & RES %in% c("hourly","daily"))) return("")
+ question <- if(column=="res") "resolutions" else 
+             if(column=="var") "variables"   else "periods"
+ question <- paste("Which of the following", question, "would you like to use?")
+ sid  <- if(any(ID !="")) index$id  %in% ID  else TRUE
+ sres <- if(any(RES!="")) index$res %in% RES else TRUE
+ svar <- if(any(VAR!="")) index$var %in% VAR else TRUE
+ sper <- if(any(PER!="")) index$per %in% PER else TRUE
+ options <- index[sid & sres & svar & sper , column]
+ options <- sort(unique(options))
+ if(length(options)<1) 
+   {
+   warning("For interactive selection, no options were found for your request. ",
+           "Proceeding with ", column,"=''.", call.=FALSE)
+   return("")
+   }
+ if("hourly" %in% options) # order resolution manually:
+   {
+   names(options) <- options
+   ord <- c("1_minute","10_minutes","hourly","subdaily","daily","monthly","annual")
+   ord <- c(ord, options[!options %in% ord]) # potentially further resolutions
+   options <- options[ord]
+   names(options) <- NULL
+   }
+ #options <- c(options, "''")
+ sel <- menu(options, title=question)
+ if(sel==0) return("")
+ options[sel]
+ }
+if(anyNA(res)) res[is.na(res)] <- selectPrompt("res", res, var, per, id)
+if(anyNA(var)) var[is.na(var)] <- selectPrompt("var", res, var, per, id)
+if(anyNA(per)) per[is.na(per)] <- selectPrompt("per", res, var, per, id)
+# 
 # ------------------------------------------------------------------------------
 #
 # loop over each input element:
@@ -290,7 +323,7 @@ if(givenid & !givenpath)
   if(length(filename)>1) warning(traceCall(3, "", ": "), "in file index '", findexname,
                                  "', there are ", length(filename), " files with ID ",
                                  id[i], ".", call.=FALSE)
-  return(   paste0(base, filename)   )
+  return(   paste0(base,"/",filename)   )
   }
 #
 # Case 3 and 4 (path given) - path existence check ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -312,7 +345,7 @@ if(meta[i])
   if(sum(sel)==0) warning(traceCall(3, "", ": "), "according to file index '",findexname,
                      "', there is no description file in '", path, "'.", call.=FALSE)
   filename <- findex[sel,"path"]
-  return(   paste0(base, filename)   )
+  return(   paste0(base,"/",filename)   )
   }
 # 3: id is empty, path is given ------------------------------------------------
 # all filenames EXCEPT metadata (-> only zipfiles)
@@ -325,7 +358,7 @@ if(!givenid & givenpath & !meta[i])
   if(length(filename)<1) warning(traceCall(3, "", ": "), "according to file index '",
                                  findexname, "', there is no file in '", path,
                                  "' with ID ", id[i], ".", call.=FALSE)
-  return(   paste0(base, filename)   )
+  return(   paste0(base,"/",filename)   )
   }
 # 4: id and path are both given ------------------------------------------------
 # regular single data file name
@@ -340,7 +373,7 @@ if(givenid & givenpath & !meta[i])
                                  length(filename),") were selected:",
                                  berryFunctions::truncMessage(filename, prefix=""),
                                  call.=FALSE)
-  return(   paste0(base, filename)   )
+  return(   paste0(base,"/",filename)   )
   }
 }) # loop end
 output <- if(len==1) output[[1]] else output
