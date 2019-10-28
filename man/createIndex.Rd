@@ -6,8 +6,8 @@
 \usage{
 createIndex(paths, base = dwdbase, dir = "DWDdata",
   fname = "fileIndex.txt", meta = FALSE, metadir = "meta",
-  mname = "metaIndex.txt", gname = "geoIndex.txt", quiet = FALSE,
-  ...)
+  mname = "metaIndex.txt", gname = "geoIndex.txt", overwrite = FALSE,
+  checkwarn = TRUE, quiet = FALSE, ...)
 }
 \arguments{
 \item{paths}{Char: vector of DWD paths returned by \code{\link{indexFTP}} called
@@ -35,6 +35,13 @@ write \code{\link{metaIndex}}.
 Use \code{mname=""} to suppress writing. DEFAULT: "metaIndex.txt"}
 
 \item{gname}{Filename for \code{\link{geoIndex}}. DEFAULT: "geoIndex.txt"}
+
+\item{overwrite}{Logical: Overwrite existing \code{fname / mname / gname} files? 
+If not, "_n" is added to the filenames, see 
+\code{berryFunctions::\link[berryFunctions]{newFilename}}.
+DEFAULT: FALSE}
+
+\item{checkwarn}{Logical: warn about \code{\link{checkIndex}} issues? DEFAULT: TRUE}
 
 \item{quiet}{Logical: Suppress messages about progress and filenames? DEFAULT: FALSE}
 
@@ -65,14 +72,10 @@ ind2 <- createIndex(c(link,link2,link3), dir=tempdir(), meta=TRUE)
 lapply(ind2, head)
 }
 
-# For real usage, see last part of
-if(interactive())
-browseURL("https://github.com/brry/rdwd/blob/master/R/rdwd-package.R")
-# where the Indexes are added to the package
-
 }
 \seealso{
-\code{\link{indexFTP}}, \code{\link{fileIndex}}, \code{\link{metaIndex}}, \code{\link{selectDWD}}
+\code{\link{indexFTP}}, \code{\link{updateIndexes}}
+\code{\link{index}}, \code{\link{selectDWD}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Oct-Nov 2016, June 2017

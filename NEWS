@@ -1,9 +1,10 @@
 
 rdwd ToDo-list / wishlist / issues
-- dataDWD: potentially use curl to download data without sleep need
-- readDWD: figure out reason for fread trouble (reported in emails by some users)
-- readRadarFile: check with RX file, see if NA assignment is redundant
-- readDWD.nc for grids_germany/daily/Project_TRY ?
+- readDWD.data: figure out reason for fread trouble (reported in emails by some users)
+- readDWD.meta: better analasis of fwf widths needed
+- indexFTP: read tree with data.table/vroom
+- selectDWD("Berlin", res="monthly", var="kl", per="h", exactmatch = F) should only return stations with data, with a single warning only
+
 
 
 ---------------------------------------
@@ -13,6 +14,36 @@ Any feedback is welcome, per email or on github.com/brry/rdwd
 
 
 rdwd Version history
+
+-----------------------------
+-----------------------------
+
+Version 1.2.0 (2019-10-26)
+Highlights:
+- Vignettes moved to https://bookdown.org/brry/rdwd with nice structure
+- improved reading of gridded data, documented in vignette chapter "Raster data"
+- readRadarFile expanded + moved to own package (dwdradar) with proper tests and better warnings
+- Hexsticker created
+
+Important changes:
+- readDWD.binary: untarring improved
+- projectRasterDWD: default extents + projs added for seasonal + nc
+- source code directory structure updated
+- quiet argument added to many functions
+- readDWD: order and documentation of method selection improved
+- metaIndex + fileIndex: date columns are now of class Date
+- dataDWD: force can now be number of hours after which to re-download
+- various minor fixes, see https://github.com/brry/rdwd/commits
+
+New functions + datasets:
+- readDWD.radar + readDWD.nc + readDWD.stand
+- checkSuggestedPackages
+- EUR + addBorders
+- formatIndex
+- runLocalTests
+- updateIndexes (not exported)
+
+
 
 -----------------------------
 -----------------------------

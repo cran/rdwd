@@ -39,7 +39,6 @@ data.frame
 \description{
 read grid-interpolated radolan asc data. 
 Intended to be called via \code{\link{readDWD}}.\cr
-See \url{ftp://ftp-cdc.dwd.de/pub/CDC/grids_germany/hourly/radolan/README.txt}
 All layers (following \code{selection} if given) in all .tar.gz files are 
 combined into a raster stack with \code{raster::\link[raster]{stack}}.\cr
 To project the data, use \code{\link{projectRasterDWD}}
@@ -49,20 +48,17 @@ To project the data, use \code{\link{projectRasterDWD}}
 
 # File selection and download:
 datadir <- localtestdir()
-# 2019-05-18, hourly radolan files not yet copied to new ftp, hence:
-gridbase <- "ftp://ftp-cdc.dwd.de/pub/CDC/grids_germany" 
 radbase <- paste0(gridbase,"/hourly/radolan/historical/asc/")
 radfile <- "2018/RW-201809.tar" # 25 MB to download
 file <- dataDWD(radfile, base=radbase, joinbf=TRUE, dir=datadir,
                 dfargs=list(mode="wb"), read=FALSE) # download with mode=wb!!!
                 
 #asc <- readDWD(file) # 4 GB in mem. ~ 20 secs unzip, 30 secs read, 10 min divide
-asc <- readDWD(file, selection=1:20, dividebyten=TRUE)
+asc <- readDWD(file, selection=1:5, dividebyten=TRUE)
 asc <- projectRasterDWD(asc)
 
 raster::plot(asc[[1]], main=names(asc)[1])
-data(DEU)
-raster::plot(DEU, add=TRUE)
+addBorders()
 
 rng <- range(raster::cellStats(asc, "range"))
 nframes <- 3 # raster::nlayers(asc) for all (time intensive!)

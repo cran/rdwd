@@ -1,18 +1,17 @@
-# read dwd data ----
+# read dwd ----
 
-#' Process data from the DWD CDC FTP Server
-#' 
-#' Read climate data that was downloaded with \code{\link{dataDWD}}.
+#' @title Process data from the DWD CDC FTP Server
+#' @description Read climate data that was downloaded with \code{\link{dataDWD}}.
 #' The data is unzipped and subsequently, the file is read, processed and
-#' returned as a data.frame.\cr
+#' returned as a data.frame / raster object.\cr
 #' New users are advised to set \code{varnames=TRUE} to obtain more informative
 #' column names.\cr\cr
 #' \code{readDWD} will call internal (but documented) functions depending on the
-#' arguments \code{meta, binary, raster, multia, asc}:\cr
-#' to read observational data: \code{\link{readDWD.data},
-#'          \link{readDWD.meta}, \link{readDWD.multia}}\cr
-#' to read interpolated gridded data: \code{\link{readDWD.binary},
-#'          \link{readDWD.raster}, \link{readDWD.asc}}\cr
+#' arguments \code{multia, meta, stand, binary, raster, nc, radar, asc}:\cr
+#' to read observational data (\href{https://bookdown.org/brry/rdwd/available-datasets.html}{overview}): \code{\link{readDWD.data},
+#'          \link{readDWD.multia}, \link{readDWD.stand}, \link{readDWD.meta}}\cr
+#' to read gridded data (\href{https://bookdown.org/brry/rdwd/raster-data.html}{overview}): \code{\link{readDWD.binary},
+#'          \link{readDWD.raster}, \link{readDWD.radar}, \link{readDWD.nc}, \link{readDWD.asc}}\cr
 #' Not all arguments to \code{readDWD} are used for all functions, e.g. 
 #' \code{fread} is used only by \code{.data}, while \code{dividebyten} 
 #' is used in \code{.raster} and \code{.asc}.\cr\cr
@@ -20,13 +19,14 @@
 #' also be a vector and will be recycled to the length of \code{file}.
 #' 
 #' @return Invisible data.frame of the desired dataset, 
-#'         or a named list of data.frames if length(file) > 1.
-#'         \code{\link{readDWD.binary}} returns a vector, 
+#'         or a named list of data.frames if length(file) > 1.\cr
+#'         \code{\link{readDWD.binary}}, 
 #'         \code{\link{readDWD.raster}} and \code{\link{readDWD.asc}} 
 #'         return raster objects instead of data.frames.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jul-Oct 2016, Winter 2018/19
 #' @seealso \code{\link{dataDWD}}, \code{\link{readVars}}, 
-#'          \code{\link{readMeta}}, \code{\link{selectDWD}}
+#'          \code{\link{readMeta}}, \code{\link{selectDWD}}\cr
+#'          \url{https://bookdown.org/brry/rdwd}
 #' @keywords file chron
 #' @importFrom utils read.table unzip read.fwf untar write.table
 #' @importFrom berryFunctions checkFile na9 traceCall l2df owa
@@ -40,31 +40,43 @@
 #'               \code{\link{dataDWD}},
 #'               e.g. "~/DWDdata/tageswerte_KL_02575_akt.zip" or
 #'               "~/DWDdata/RR_Stundenwerte_Beschreibung_Stationen.txt"
+#' @param quiet  Logical: suppress messages? DEFAULT: FALSE
 #' @param progbar Logical: present a progress bar with estimated remaining time?
 #'               If missing and length(file)==1, progbar is internally set to FALSE.
-#'               DEFAULT: TRUE
+#'               DEFAULT: !quiet
 #' @param fread  Logical (vector): read fast? See \code{\link{readDWD.data}}.
 #'               DEFAULT: FALSE (some users complain it doesn't work on their PC)
 #' @param varnames Logical (vector): Expand column names? 
 #'               See \code{\link{readDWD.data}}. DEFAULT: FALSE
+#' @param var    var for \code{\link{readDWD.nc}}. DEFAULT: ""
 #' @param format,tz Format and time zone of time stamps, see \code{\link{readDWD.data}}
 #' @param dividebyten Logical (vector): Divide the values in raster files by ten?
 #'               Used in \code{\link{readDWD.raster}} and \code{\link{readDWD.asc}}.
 #'               DEFAULT: TRUE
+#' @param multia Logical (vector): is the \code{file} a multi_annual file?
+#'               Overrides \code{meta}, so set to FALSE manually if 
+#'               \code{\link{readDWD.meta}} needs to be called on a (manually renamed) 
+#'               Beschreibung file ending with "Standort.txt". 
+#'               See \code{\link{readDWD.multia}}.
+#'               DEFAULT: TRUE for each file ending in "Standort.txt"
+#' @param stand  Logical (vector): is the \code{file} a subdaily/standard_format file?
+#'               See \code{\link{readDWD.stand}}.
+#'               DEFAULT: TRUE fo files containing "standard_format" in the name.
 #' @param meta   Logical (vector): is the \code{file} a meta file (Beschreibung.txt)?
 #'               See \code{\link{readDWD.meta}}.
 #'               DEFAULT: TRUE for each file ending in ".txt"
-#' @param multia Logical (vector): is the \code{file} a multi_annual file?
-#'               Overrides \code{meta}, so set to FALSE manually if 
-#'               \code{\link{readDWD.meta}} needs to be called on a file ending
-#'               with "Standort.txt". See \code{\link{readDWD.multia}}.
-#'               DEFAULT: TRUE for each file ending in "Standort.txt"
 #' @param binary Logical (vector): does the \code{file} contain binary files?
 #'               See \code{\link{readDWD.binary}}.
 #'               DEFAULT: TRUE for each file ending in ".tar.gz"
 #' @param raster Logical (vector): does the \code{file} contain a raster file?
 #'               See \code{\link{readDWD.raster}}.
 #'               DEFAULT: TRUE for each file ending in ".asc.gz"
+#' @param nc     Logical (vector): does the \code{file} contain a netcdf file?
+#'               See \code{\link{readDWD.nc}}.
+#'               DEFAULT: TRUE for each file ending in ".nc.gz"
+#' @param radar  Logical (vector): does the \code{file} contain a single binary file?
+#'               See \code{\link{readDWD.radar}}.
+#'               DEFAULT: TRUE for each file ending in ".gz"
 #' @param asc    Logical (vector): does the \code{file} contain asc files?
 #'               See \code{\link{readDWD.asc}}.
 #'               DEFAULT: TRUE for each file ending in ".tar"
@@ -74,17 +86,22 @@
 #' 
 readDWD <- function(
 file,
-progbar=TRUE,
+quiet=FALSE,
+progbar=!quiet,
 fread=FALSE,
 varnames=FALSE,
+var="",
 format=NA,
 tz="GMT",
 dividebyten=TRUE,
-meta=  grepl(        '.txt$', file),
-multia=grepl('Standort.txt$', file),
-binary=grepl(     '.tar.gz$', file),
-raster=grepl(     '.asc.gz$', file),
-asc=   grepl(        '.tar$', file),
+multia=grepl(  'Standort.txt$', file),
+meta=  grepl(          '.txt$', file),
+stand= grepl("standard_format", file),
+binary=grepl(       '.tar.gz$', file),
+raster=grepl(       '.asc.gz$', file),
+nc=    grepl(        '.nc.gz$', file),
+radar =grepl(           '.gz$', file),
+asc=   grepl(          '.tar$', file),
 ...
 )
 {
@@ -95,23 +112,25 @@ if(anyNA(fread)) fread[is.na(fread)] <- requireNamespace("data.table",quietly=TR
 if(len>1)
   {
   fread       <- rep(fread,       length.out=len)
-  varnames    <- rep(varnames,    length.out=len)
+  varnames    <- rep(varnames,    length.out=len)  
+  var         <- rep(var,         length.out=len)
   format      <- rep(format,      length.out=len)
   tz          <- rep(tz,          length.out=len)
   dividebyten <- rep(dividebyten, length.out=len)
-  meta        <- rep(meta,        length.out=len)
   multia      <- rep(multia,      length.out=len)
+  stand       <- rep(stand,       length.out=len)
+  meta        <- rep(meta,        length.out=len)
   binary      <- rep(binary,      length.out=len)
   raster      <- rep(raster,      length.out=len)
+  nc          <- rep(nc,          length.out=len)
+  radar       <- rep(radar,       length.out=len)
   asc         <- rep(asc,         length.out=len) 
   }
 meta[multia] <- FALSE
 # Optional progress bar:
 if(progbar) lapply <- pbapply::pblapply
 # check package availability:
-if(any(fread))   if(!requireNamespace("data.table", quietly=TRUE))
-    stop("in rdwd::readDWD: to use fread=TRUE, please first install data.table:",
-         "   install.packages('data.table')", call.=FALSE)
+if(any(fread))  checkSuggestedPackage("data.table", "rdwd::readDWD with fread=TRUE") 
 #
 checkFile(file)
 # Handle German Umlaute:
@@ -131,15 +150,18 @@ if(progbar) message("Reading ", length(file), " file", if(length(file)>1)"s", ".
 # loop over each filename
 output <- lapply(seq_along(file), function(i)
 {
-# if meta/binary/raster/multia:
+# if meta/multia/radar/binary/raster/asc:
+if(multia[i]) return(readDWD.multia(file[i], ...))
+if(stand[i])  return(readDWD.stand( file[i], ...))
 if(meta[i])   return(readDWD.meta(  file[i], ...))
 if(binary[i]) return(readDWD.binary(file[i], progbar=progbar, ...))
 if(raster[i]) return(readDWD.raster(file[i], dividebyten=dividebyten[i], ...))
-if(multia[i]) return(readDWD.multia(file[i], ...))
+if(nc[i])     return(readDWD.nc(    file[i], var=var[i], quiet=quiet, ...))
+if(radar[i])  return(readDWD.radar( file[i], ...))
 if(asc[i])    return(readDWD.asc(   file[i], progbar=progbar, dividebyten=dividebyten[i], ...))
 # if data:
 readDWD.data(file[i], fread=fread[i], varnames=varnames[i], 
-             format=format[i], tz=tz[i], ...)
+             format=format[i], tz=tz[i], quiet=quiet, ...)
 }) # lapply loop end
 #
 names(output) <- tools::file_path_sans_ext(basename(file))
@@ -181,9 +203,10 @@ return(invisible(output))
 #' @param tz       Char (vector): time zone for \code{\link{as.POSIXct}}.
 #'                 "" is the current time zone, and "GMT" is UTC (Universal Time,
 #'                 Coordinated). DEFAULT: "GMT"
+#' @param quiet    Suppress empty file warnings? DEFAULT: FALSE
 #' @param \dots    Further arguments passed to \code{\link{read.table}} or 
 #'                 \code{data.table::\link[data.table]{fread}}
-readDWD.data <- function(file, fread=FALSE, varnames=FALSE, format=NA, tz="GMT", ...)
+readDWD.data <- function(file, fread=FALSE, varnames=FALSE, format=NA, tz="GMT", quiet=FALSE, ...)
 {
 if(fread)
   {
@@ -210,7 +233,7 @@ if(varnames)  dat <- newColumnNames(dat)
 # return if file is empty, e.g. for daily/more_precip/hist_05988 2019-05-16:
 if(nrow(dat)==0)
   {
-  warning("File contains no rows: ", file)
+  if(!quiet) warning("File contains no rows: ", file)
   return(dat)
   }
 # process time-stamp: http://stackoverflow.com/a/13022441
@@ -230,6 +253,183 @@ if(!is.null(format))
   }
 # final output:
 return(dat)
+}
+
+
+
+# ~ multia ----
+
+#' @title read multi_annual dwd data
+#' @description read multi_annual dwd data. 
+#' Intended to be called via \code{\link{readDWD}}.\cr
+#' All other observational data at \code{\link{dwdbase}} can be read
+#' with \code{\link{readDWD.data}}, except for the multi_annual and 
+#' subdaily/standard_format data.
+#' @return data.frame
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Feb 2019
+#' @seealso \code{\link{readDWD}}
+#' @examples
+#' \dontrun{ # Excluded from CRAN checks, but run in localtests
+#' 
+#' # Temperature aggregates (2019-04 the 9th file):
+#' durl <- selectDWD(res="multi_annual", var="mean_81-10", per="")[9]
+#' murl <- selectDWD(res="multi_annual", var="mean_81-10", per="", meta=TRUE)[9]
+#' 
+#' ma_temp <- dataDWD(durl, dir=localtestdir())
+#' ma_meta <- dataDWD(murl, dir=localtestdir())
+#' 
+#' head(ma_temp)
+#' head(ma_meta)
+#' 
+#' ma <- merge(ma_meta, ma_temp, all=TRUE)
+#' berryFunctions::linReg(ma$Stationshoehe, ma$Jahr)
+#' op <- par(mfrow=c(3,4), mar=c(0.1,2,2,0), mgp=c(3,0.6,0))
+#' for(m in colnames(ma)[8:19])
+#'   {
+#'   berryFunctions::linReg(ma$Stationshoehe, ma[,m], xaxt="n", xlab="", ylab="", main=m)
+#'   abline(h=0)
+#'   }
+#' par(op)
+#' 
+#' par(bg=8)
+#' berryFunctions::colPoints(ma$geogr..Laenge, ma$geogr..Breite, ma$Jahr, add=F, asp=1.4)
+#' 
+#' data("DEU")
+#' pdf("MultiAnn.pdf", width=8, height=10)
+#' par(bg=8)
+#' for(m in colnames(ma)[8:19])
+#'   {
+#'   raster::plot(DEU, border="darkgrey")
+#'   berryFunctions::colPoints(ma[-262,]$geogr..Laenge, ma[-262,]$geogr..Breite, ma[-262,m], 
+#'                             asp=1.4, # Range=range(ma[-262,8:19]), 
+#'                             col=berryFunctions::divPal(200, rev=TRUE), zlab=m, add=T)
+#'   }
+#' dev.off()
+#' berryFunctions::openFile("MultiAnn.pdf")
+#' }
+#' @param file  Name of file on harddrive, like e.g. 
+#'              DWDdata/multi_annual_mean_81-10_Temperatur_1981-2010_aktStandort.txt or
+#'              DWDdata/multi_annual_mean_81-10_Temperatur_1981-2010_Stationsliste_aktStandort.txt
+#' @param fileEncoding \link{read.table} \link{file} encoding.
+#'              DEFAULT: "latin1" (needed on Linux, optional but not hurting on windows)
+#' @param comment.char \link{read.table} comment character.
+#'              DEFAULT: "\\032" (needed 2019-04 to ignore the binary 
+#'              control character at the end of multi_annual files)
+#' @param \dots Further arguments passed to \code{\link{read.table}}
+readDWD.multia <- function(file, fileEncoding="latin1", comment.char="\032", ...)
+{
+out <- read.table(file, sep=";", header=TRUE, fileEncoding=fileEncoding, 
+                  comment.char=comment.char, ...)
+nc <- ncol(out)
+# presumably, all files have a trailing empty column...
+if(colnames(out)[nc]=="X") out <- out[,-nc]
+out
+}
+
+
+
+# ~ stand ----
+
+#' @title read subdaily/standard_format dwd data
+#' @description read subdaily/standard_format dwd data. 
+#' Intended to be called via \code{\link{readDWD}}.\cr
+#' All other observational data at \code{\link{dwdbase}} can be read
+#' with \code{\link{readDWD.data}}, except for the multi_annual and 
+#' subdaily/standard_format data.
+#' @return data.frame with column names as per \code{\link{formatIndex}}.
+#' "Q"-columns have "_parameter" appended to their name. A "Date" column has been added.
+#' NA-indicators have been processed into NAs.
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct 2019
+#' @seealso \code{\link{readDWD}}
+#' @examples
+#' \dontrun{ # Excluded from CRAN checks, but run in localtests
+#' 
+#' link <- selectDWD(id=10381, res="subdaily", var="standard_format", per="r")
+#' file <- dataDWD(link, dir=localtestdir(), read=FALSE)
+#' sf <- readDWD(file)
+#' 
+#' sf2 <- readDWD(file, fast=FALSE) # 20 secs!
+#' stopifnot(all.equal(sf, sf2))
+#' 
+#' plot(sf$Date, sf$SHK, type="l")
+#' 
+#' # Plot all columns:
+#' if(FALSE){ # not run in any automated testing
+#' tmp <- tempfile(fileext=".pdf")
+#' char2fact <- function(x) 
+#'  {
+#'  if(all(is.na(x))) return(rep(-9, len=length(x)))
+#'  if(!is.numeric(x)) as.factor(x) else x
+#'  }
+#' pdf(tmp, width=9)
+#' par(mfrow=c(2,1),mar=c(2,3,2,0.1), mgp=c(3,0.7,0), las=1)
+#' for(i in 3:ncol(sf)-1) plot(sf$Date, char2fact(sf[,i]), type="l", main=colnames(sf)[i], ylab="")
+#' dev.off()
+#' berryFunctions::openFile(tmp)
+#' }
+#' }
+#' @param file  Name of file on harddrive, like e.g. 
+#'              DWDdata/subdaily_standard_format_kl_10381_00_akt.txt or
+#'              DWDdata/subdaily_standard_format_kl_10381_bis_1999.txt.gz
+#' @param fast  Logical: use \code{readr::\link[readr]{read_fwf}} 
+#'              instead of \code{\link{read.fwf}}? 
+#'              Takes 0.1 instead of 20 seconds but requires package to be installed.
+#'              if fast=TRUE, \code{fileEncoding} is ignored.
+#'              DEFAULT: TRUE
+#' @param fileEncoding \link{read.table} \link{file} encoding.
+#'              DEFAULT: "latin1" (potentially needed on Linux, 
+#'              optional but not hurting on windows)
+#' @param formIndex Single object: Index used to select column widts and NA values.
+#'              To use a current / custom index, see the source code of
+#'              \code{\link{updateIndexes}} at
+#'              \url{https://github.com/brry/rdwd/blob/master/R/updateIndexes.R}.
+#'              DEFAULT: \code{rdwd:::\link{formatIndex}}
+#' @param \dots Further arguments passed to \code{\link{read.fwf}}
+#'              or \code{readr::\link[readr]{read_fwf}} 
+readDWD.stand <- function(file, fast=TRUE, fileEncoding="latin1", formIndex=formatIndex, ...)
+{
+# check column existence
+musthave <- c("Pos","Fehlk","dividebyten","Label")
+has <- musthave %in% colnames(formIndex)
+if(any(!has)) stop("formIndex must contain column(s) ", musthave[!has])
+# get column widths:
+width <- diff(as.numeric(formIndex$Pos))
+width <- c(width, 1)
+# read fixed width dataset:
+if(fast)
+  {
+  checkSuggestedPackage("readr", "readDWD.stand with fast=TRUE")  
+  coltypes <- readr::cols(X22=readr::col_character()) # 22 is S column
+  # if not specified, will guess logical and then complain about character input later in file
+  sf <- readr::read_fwf(file, readr::fwf_widths(width), col_types=coltypes, ...)
+  sf <- data.frame(sf) # loose tibble attributes and printing methods
+  # mimick read.fwf behaviour:
+  sf[is.na(sf)] <- " " # to avoid NA comparison
+  for(i in c(2,4,5,6)) sf[,i] <- as.integer(sf[,i])
+  } else # see developmentNotes for speed comparison
+  sf <- read.fwf(file, widths=width, stringsAsFactors=FALSE, fileEncoding=fileEncoding, ...) 
+# dimension check:
+if(ncol(sf) != nrow(formIndex)) stop("incorrectly read file: ", file,"\n", 
+   ncol(sf), " columns instead of ", nrow(formIndex), " as dictated by formIndex.")
+# NAs (starting with column 7):
+for(i in which(formIndex$Fehlk!=""))
+  {
+  isNA <- as.character(sf[,i])==formIndex$Fehlk[i]
+  if(anyNA(isNA)) stop("NAs in comparison in column ", i, " of file ", file)
+  sf[isNA, i] <- NA
+  }
+# divide by ten:
+for(i in which(formIndex$dividebyten)) sf[,i] <- sf[,i]/10
+# column names:
+cn <- formIndex$Label
+Qind <- which(cn=="Q")
+cn[Qind] <- paste0(cn[Qind], "_", cn[Qind-1])
+cn[cn==""] <- "Leer"
+colnames(sf) <- cn
+# add Date column:
+sf$Date <- as.Date(paste(sf$JA,sf$MO,sf$TA,sep="-"), "%F")
+#output:
+return(sf)
 }
 
 
@@ -296,6 +496,7 @@ if(sdsf)
                       "geoBreite", "geoLaenge", "Stationsname", "Bundesland")
  }
 # check classes:
+if(ncol(stats)!=8) stop(ncol(stats)," columns detected instead of 8 for ", file)
 classes <- c("integer", "integer", "integer", "integer", "numeric", "numeric", "factor", "factor")
 actual <- sapply(stats, class)
 if(actual[4]=="numeric") classes[4] <- "numeric"
@@ -313,76 +514,6 @@ stats
 
 
 
-# ~ multia ----
-
-#' @title read multi_annual dwd data
-#' @description read multi_annual dwd data. 
-#' Intended to be called via \code{\link{readDWD}}.\cr
-#' All other observational data at \code{\link{dwdbase}} can be read
-#' with \code{\link{readDWD.data}}, except for the multi_annual data.
-#' @return data.frame
-#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Feb 2019
-#' @seealso \code{\link{readDWD}}
-#' @examples
-#' \dontrun{ # Excluded from CRAN checks, but run in localtests
-#' 
-#' # Temperature aggregates (2019-04 the 9th file):
-#' durl <- selectDWD(res="multi_annual", var="mean_81-10", per="")[9]
-#' murl <- selectDWD(res="multi_annual", var="mean_81-10", per="", meta=TRUE)[9]
-#' 
-#' ma_temp <- dataDWD(durl, dir=localtestdir())
-#' ma_meta <- dataDWD(murl, dir=localtestdir())
-#' 
-#' head(ma_temp)
-#' head(ma_meta)
-#' 
-#' ma <- merge(ma_meta, ma_temp, all=TRUE)
-#' berryFunctions::linReg(ma$Stationshoehe, ma$Jahr)
-#' op <- par(mfrow=c(3,4), mar=c(0.1,2,2,0), mgp=c(3,0.6,0))
-#' for(m in colnames(ma)[8:19])
-#'   {
-#'   berryFunctions::linReg(ma$Stationshoehe, ma[,m], xaxt="n", xlab="", ylab="", main=m)
-#'   abline(h=0)
-#'   }
-#' par(op)
-#' 
-#' par(bg=8)
-#' berryFunctions::colPoints(ma$geogr..Laenge, ma$geogr..Breite, ma$Jahr, add=F, asp=1.4)
-#' 
-#' data("DEU")
-#' pdf("MultiAnn.pdf", width=8, height=10)
-#' par(bg=8)
-#' for(m in colnames(ma)[8:19])
-#'   {
-#'   raster::plot(DEU, border="darkgrey")
-#'   berryFunctions::colPoints(ma[-262,]$geogr..Laenge, ma[-262,]$geogr..Breite, ma[-262,m], 
-#'                             asp=1.4, # Range=range(ma[-262,8:19]), 
-#'                             col=berryFunctions::divPal(200, rev=TRUE), zlab=m, add=T)
-#'   }
-#' dev.off()
-#' berryFunctions::openFile("MultiAnn.pdf")
-#' }
-#' @param file  Name of file on harddrive, like e.g. 
-#'              DWDdata/multi_annual_mean_81-10_Temperatur_1981-2010_aktStandort.txt or
-#'              DWDdata/multi_annual_mean_81-10_Temperatur_1981-2010_Stationsliste_aktStandort.txt
-#' @param fileEncoding \link{read.table} \link{file} encoding.
-#'              DEFAULT: "latin1" (needed on Linux, optional but not hurting on windows)
-#' @param comment.char \link{read.table} comment character.
-#'              DEFAULT: "\\032" (needed 2019-04 to ignore the binary 
-#'              control character at the end of multi_annual files)
-#' @param \dots Further arguments passed to \code{\link{read.table}}
-readDWD.multia <- function(file, fileEncoding="latin1", comment.char="\032", ...)
-{
-out <- read.table(file, sep=";", header=TRUE, fileEncoding=fileEncoding, 
-                  comment.char=comment.char, ...)
-nc <- ncol(out)
-# presumably, all files have a trailing empty column...
-if(colnames(out)[nc]=="X") out <- out[,-nc]
-out
-}
-
-
-
 # read gridded data ----
 
 # ~ binary ----
@@ -392,9 +523,9 @@ out
 #' Intended to be called via \code{\link{readDWD}}.\cr
 #' @return list depending on argument \code{toraster}, see there for details
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Dec 2018. 
-#'         Significant input for the underlying \code{\link{readRadarFile}} came
+#'         Significant input for the underlying \code{dwdradar::\link[dwdradar]{readRadarFile}} came
 #'         from Henning Rust & Christoph Ritschel at FU Berlin.
-#' @seealso \code{\link{readDWD}}\cr
+#' @seealso \code{\link{readDWD}}, especially \code{\link{readDWD.radar}}\cr
 #'   \url{https://wradlib.org} for much more extensive radar analysis in Python\cr
 #'   Kompositformatbeschreibung at \url{https://www.dwd.de/DE/leistungen/radolan/radolan.html}
 #'   for format description
@@ -415,8 +546,7 @@ out
 #' 
 #' SF_radp <- projectRasterDWD(SF_rad$data)
 #' raster::plot(SF_radp[[1]], main=SF_rad$meta$date[1])
-#' data(DEU)
-#' raster::plot(DEU, add=TRUE)
+#' addBorders()
 #' 
 #' 
 #' # RW file as example: ----
@@ -429,7 +559,7 @@ out
 #' RW_rad <- readDWD(RW_file, selection=1:10, exdir=RW_exdir)
 #' RW_radp <- projectRasterDWD(RW_rad$data, extent="rw")
 #' raster::plot(RW_radp[[1]], main=RW_rad$meta$date[1])
-#' raster::plot(DEU, add=TRUE)
+#' addBorders()
 #' 
 #' # ToDo: why are values + patterns not the same?
 #' 
@@ -443,7 +573,7 @@ out
 #'                  will be unpacked with \code{\link{untar}}. Note that exdir
 #'                  size will be around 1.1 GB. exdir can contain other files, 
 #'                  these will be ignored for the actual reading with 
-#'                  \code{\link{readRadarFile}} (function not exported, but documented).
+#'                  \code{dwdradar::\link[dwdradar]{readRadarFile}}.
 #'                  DEFAULT exdir: sub(".tar.gz$", "", file)
 #' @param toraster  Logical: convert output (list of matrixes + meta informations)
 #'                  to a list with data (\code{raster \link[raster]{stack}}) + 
@@ -454,41 +584,44 @@ out
 #'                  DEFAULT: TRUE
 #' @param selection Optionally read only a subset of the ~24*31=744 files.
 #'                  Called as \code{f[selection]}. DEFAULT: NULL (ignored)
-#' @param \dots     Further arguments passed to \code{\link{readRadarFile}}, 
+#' @param \dots     Further arguments passed to \code{dwdradar::\link[dwdradar]{readRadarFile}}, 
 #'                  i.e. \code{na} and \code{clutter}
 readDWD.binary <- function(file, exdir=sub(".tar.gz$", "", file), 
                            toraster=TRUE, progbar=TRUE, selection=NULL, ...)
 {
+checkSuggestedPackage("dwdradar", "rdwd:::readDWD.binary")
 pmessage <- function(...) if(progbar) message(...)
 # Untar as needed:
 pmessage("\nChecking which files need to be untarred to ", exdir, "...")
-lf <- untar(file, list=TRUE)
-tountar <- !lf %in% dir(exdir)
+f <- sort(untar(file, list=TRUE))
+if(!is.null(selection)) f <- f[selection]
+tountar <- !f %in% dir(exdir)
 if(any(tountar)) 
   {
-  pmessage("Unpacking ",sum(tountar), " of ",length(lf), " files in ",file,"...")
-  untar(file, files=lf[tountar], exdir=exdir)
+  pmessage("Unpacking ",sum(tountar), " of ",length(f), " files from ",file,"...")
+  ufiles <- if(any(!tountar) | !is.null(selection)) f[tountar] else NULL
+  # warning message if all(tountar) for non-empty exdir
+  # cannot read the message because of max options(warning.length) 8170
+  # but this workaround does the job, so whatever.
+  untar(file, files=ufiles, exdir=exdir)
   } else 
   pmessage("All files were already untarred.")
 #
 # hourly files:
-f <- dir(exdir, full.names=TRUE) # 31*24 = 744 files  (daily/hist/2017-12)
+fd <- dir(exdir, full.names=TRUE) # 31*24 = 744 files  (daily/hist/2017-12)
 # read only the ones from file, not other stuff at exdir:
-f <- f[basename(f) %in% lf]
-if(!is.null(selection)) f <- f[selection]
+f <- fd[basename(fd) %in% f]
 #
 pmessage("Reading ",length(f)," binary files...")
 if(progbar) lapply <- pbapply::pblapply
 # Read the actual binary file:
-rb <- lapply(f, readRadarFile, ...)
+rb <- lapply(f, dwdradar::readRadarFile, ...)
 # list element names (time stamp):
 time <- sapply(rb, function(x) as.character(x$meta$date))
 names(rb) <- time
 if(!toraster) return(invisible(rb))
 # else if toraster:
-if(!requireNamespace("raster", quietly=TRUE))
- stop("To use rdwd:::readDWD.binary with toraster=TRUE, please first install raster:",
-      "   install.packages('raster')", call.=FALSE)
+checkSuggestedPackage("raster", "rdwd:::readDWD.binary with toraster=TRUE")
 pmessage("Converting to raster...")
 rbmat <- base::lapply(rb,"[[",1)
 rbmat <- lapply(rbmat, raster::raster)
@@ -530,8 +663,7 @@ return(invisible(list(data=rbmat, meta=rbmeta)))
 #' 
 #' rfp <- projectRasterDWD(rf, proj="seasonal", extent=rf@extent)
 #' raster::plot(rfp)
-#' data(DEU)
-#' raster::plot(DEU, add=TRUE)
+#' addBorders()
 #' 
 #' testthat::expect_equal(raster::cellStats(rf, range), c(-8.2,4.4))
 #' rf10 <- readDWD(localfiles[1], dividebyten=FALSE)
@@ -542,7 +674,7 @@ return(invisible(list(data=rbmat, meta=rbmeta)))
 #'                    DWDdata/grids_germany/seasonal/air_temperature_mean/
 #'                    16_DJF_grids_germany_seasonal_air_temp_mean_188216.asc.gz
 #' @param gargs       Named list of arguments passed to 
-#'                    \code{R.utils::\link[R.utils]{gunzip}}. The internal 
+#'                    \code{R.utils::\link[R.utils:compressFile]{gunzip}}. The internal 
 #'                    defaults are: \code{remove=FALSE} (recommended to keep this
 #'                    so \code{file} does not get deleted) and \code{skip=TRUE}
 #'                    (which reads previously unzipped files as is).
@@ -557,12 +689,8 @@ return(invisible(list(data=rbmat, meta=rbmeta)))
 #' @param \dots       Further arguments passed to \code{raster::\link[raster]{raster}}
 readDWD.raster <- function(file, gargs=NULL, dividebyten, ...)
 {
-if(!requireNamespace("R.utils", quietly=TRUE))
-  stop("To use rdwd:::readDWD.raster, please first install R.utils:",
-       "   install.packages('R.utils')", call.=FALSE)
-if(!requireNamespace("raster", quietly=TRUE))
- stop("To use rdwd:::readDWD.raster, please first install raster:",
-      "   install.packages('raster')", call.=FALSE)
+checkSuggestedPackage("R.utils", "rdwd:::readDWD.raster")
+checkSuggestedPackage("raster",  "rdwd:::readDWD.raster")
 #https://stackoverflow.com/questions/5227444/recursively-ftp-download-then-extract-gz-files
 # gunzip arguments:
 gdef <- list(filename=file, remove=FALSE, skip=TRUE)
@@ -576,12 +704,185 @@ return(invisible(r))
 
 
 
+# ~ nc ----
+
+#' @title read dwd netcdf data
+#' @description Read netcdf data. 
+#' Intended to be called via \code{\link{readDWD}}.\cr
+#' Note that \code{R.utils} and \code{ncdf4} must be installed to unzip and read the .nc.gz files.
+#' @return \code{raster::\link[raster]{brick}} object. Alternatively, 
+#' if toraster=FALSE, a list with time, lat, lon, var, varname, file and cdf.
+#' \bold{cdf} is the output of \code{ncdf4::\link[ncdf4]{nc_open}}.
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Aug 2019
+#' @seealso \code{\link{readDWD}}
+#' @examples
+#' \dontrun{ # Excluded from CRAN checks, but run in localtests
+#' 
+#' library(berryFunctions) # for seqPal and colPointsLegend
+#' 
+#' url <- "daily/Project_TRY/pressure/PRED_199606_daymean.nc.gz"  #  5 MB
+#' url <- "daily/Project_TRY/humidity/RH_199509_daymean.nc.gz"    # 25 MB
+#' file <- dataDWD(url, base=gridbase, joinbf=TRUE, dir=localtestdir(), read=FALSE)
+#' nc <- readDWD(file)
+#' ncp <- projectRasterDWD(nc, proj="nc", extent="nc")
+#' raster::plot(ncp[[1]], col=seqPal(), main=paste(nc@title, nc@z$"Date/time"[1]))
+#' addBorders()
+#' str(nc, max.level=2)
+#' 
+#' rng <- range(raster::cellStats(nc[[1:6]], "range"))
+#' raster::plot(nc, col=seqPal(), zlim=rng, maxnl=6)
+#' 
+#' # Array instead of raster brick:
+#' nc <- readDWD(file, toraster=FALSE)
+#' image(nc$var[,,1], col=seqPal(), asp=1.1)
+#' colPointsLegend(nc$var[,,1], title=paste(nc$varname, nc$time[1]))
+#' 
+#' # interactive selection of variable:
+#' # nc <- readDWD(file, var="-") # uncommented to not block automated tests 
+#' str(nc$var)
+#' }
+#' @param file        Name of file on harddrive, like e.g. 
+#'                    DWDdata/grids_germany/daily/Project_TRY/humidity/RH_199509_daymean.nc.gz
+#' @param gargs       Named list of arguments passed to 
+#'                    \code{R.utils::\link[R.utils:compressFile]{gunzip}}, 
+#'                    see \code{\link{readDWD.raster}}. DEFAULT: NULL
+#' @param toraster    Read file with \code{raster::\link[raster]{brick}}? 
+#'                    All further arguments will be ignored. Specify e.g. var through \dots.
+#'                    DEFAULT: TRUE
+#' @param var         if toraster=FALSE: Charstring with name of variable to be read with 
+#'                    \code{ncdf4::\link[ncdf4]{ncvar_get}}. If not available, 
+#'                    an interactive selection is presented.
+#'                    DEFAULT: "" (last variable)
+#' @param quiet       Logical: Suppress time conversion failure warning? DEFAULT: FALSE
+#' @param \dots       Further arguments passed to \code{raster::\link[raster]{brick}}
+#'                    or \code{ncdf4::\link[ncdf4]{nc_open}}
+#' 
+readDWD.nc <- function(file, gargs=NULL, var="", toraster=TRUE, quiet=FALSE, ...)
+{
+checkSuggestedPackage("ncdf4", "rdwd:::readDWD.nc") # also needed if toraster=TRUE
+checkSuggestedPackage("R.utils", "rdwd:::readDWD.nc")
+# gunzip arguments:
+gdef <- list(filename=file, remove=FALSE, skip=TRUE)
+gfinal <- berryFunctions::owa(gdef, gargs, "filename")
+ncfile <- do.call(R.utils::gunzip, gfinal)
+#
+if(toraster) 
+  {
+  checkSuggestedPackage("raster", "rdwd:::readDWD.nc with toraster=TRUE")
+  return(invisible(raster::brick(ncfile, ...)))
+  }
+#
+#
+# NCDF File
+mycdf <- ncdf4::nc_open(ncfile, ...)
+#
+# Time stamp:
+unit <- mycdf$dim$time$units
+if(is.null(unit))
+ {
+ if(!quiet) message("Time could not be read from cdf file and is set to 1.")
+ time <- 1
+ } else
+if(substr(unit,1,4)=="days")
+ {
+ start <- sub("days since", "", unit)
+ start <- strsplit(removeSpace(start), " ")[[1]][1]
+ start <- as.Date(start)
+ time <- start + ncdf4::ncvar_get(mycdf,'time')
+ } else
+ {
+ start <- removeSpace(sub("hours since", "", unit)) # always hours?
+ start <- strptime(start, format="%F %T")
+ time <- start + ncdf4::ncvar_get(mycdf,'time')*3600
+ }
+#
+# Var name
+# select one of the possible variable names if not given:
+varnames <- names(mycdf$var)
+if(var=="") var <- tail(varnames, 1)
+while(! var %in% varnames)
+{
+ pos <- varnames[!varnames %in% c("lon","lat")] # pos: possible
+ if(length(pos)==1) var <- pos else
+ var <- pos[menu(pos, title="Which variable do you want?")]
+}
+# Actually extract the desired variables:
+LAT <- ncdf4::ncvar_get(mycdf, "lat")
+LON <- ncdf4::ncvar_get(mycdf, "lon")
+VAR <- ncdf4::ncvar_get(mycdf, var)
+# output:
+return(invisible(list(time=time, lat=LAT, lon=LON, var=VAR, varname=var, 
+                      file=mycdf$filename, cdf=mycdf)))
+}
+
+
+
+# ~ radar ----
+
+#' @title read dwd gridded radolan radar data
+#' @description read gridded radolan radar data.
+#' Intended to be called via \code{\link{readDWD}}.\cr
+#' @return Invisible list with \code{dat} (matrix or raster, depending on \code{toraster}) 
+#' and \code{meta} (list with elements from header)
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Aug 2019. 
+#'         Significant input for the underlying \code{dwdradar::\link[dwdradar]{readRadarFile}} came
+#'         from Henning Rust & Christoph Ritschel at FU Berlin.
+#' @seealso \code{\link{readDWD}}, especially \code{\link{readDWD.binary}}\cr
+#'   \url{https://wradlib.org} for much more extensive radar analysis in Python\cr
+#'   Kompositformatbeschreibung at \url{https://www.dwd.de/DE/leistungen/radolan/radolan.html}
+#'   for format description
+#' @examples
+#' \dontrun{ # Excluded from CRAN checks, but run in localtests
+#' # recent radar files 
+#' rrf <- indexFTP("hourly/radolan/recent/bin", base=gridbase, dir=tempdir())
+#' lrf <- dataDWD(rrf[773], base=gridbase, joinbf=TRUE, dir=tempdir(), read=FALSE)
+#' r <- readDWD(lrf)
+#' 
+#' rp <- projectRasterDWD(r$dat)
+#' raster::plot(rp, main=r$meta$date)
+#' addBorders()
+#' }
+#' @param file      Name of file on harddrive, like e.g. 
+#'                  DWDdata/hourly/radolan/recent/bin/
+#'                  raa01-rw_10000-1802020250-dwd---bin.gz
+#' @param gargs     Named list of arguments passed to 
+#'                  \code{R.utils::\link[R.utils:compressFile]{gunzip}}. The internal 
+#'                  defaults are: \code{remove=FALSE} (recommended to keep this
+#'                  so \code{file} does not get deleted) and \code{skip=TRUE}
+#'                  (which reads previously unzipped files as is).
+#'                  If \code{file} has changed, you might want to use 
+#'                  \code{gargs=list(skip=FALSE, overwrite=TRUE)}
+#'                  or alternatively \code{gargs=list(temporary=TRUE)}.
+#'                  The \code{gunzip} default \code{destname} means that the 
+#'                  unzipped file is stored at the same path as \code{file}.
+#'                  DEFAULT gargs: NULL
+#' @param toraster  Logical: convert output (list of matrixes + meta informations)
+#'                  to a list with data (\code{raster \link[raster]{stack}}) + 
+#'                  meta (list from the first subfile, but with vector of dates)?
+#'                  DEFAULT: TRUE
+#' @param \dots     Further arguments passed to \code{dwdradar::\link[dwdradar]{readRadarFile}}, 
+#'                  i.e. \code{na} and \code{clutter}
+readDWD.radar <- function(file, gargs=NULL, toraster=TRUE, ...)
+{
+checkSuggestedPackage("dwdradar","rdwd:::readDWD.radar")
+checkSuggestedPackage("R.utils", "rdwd:::readDWD.radar")
+# gunzip arguments:
+gdef <- list(filename=file, remove=FALSE, skip=TRUE)
+gfinal <- berryFunctions::owa(gdef, gargs, "filename")
+rdata <- do.call(R.utils::gunzip, gfinal)
+rf <- dwdradar::readRadarFile(rdata, ...)
+if(toraster) checkSuggestedPackage("raster", "rdwd:::readDWD.radar with toraster=TRUE")
+if(toraster) rf$dat <- raster::raster(rf$dat)
+return(invisible(rf))
+}
+
+
+
 # ~ asc ----
 
 #' @title read dwd gridded radolan asc data
 #' @description read grid-interpolated radolan asc data. 
 #' Intended to be called via \code{\link{readDWD}}.\cr
-#' See \url{ftp://ftp-cdc.dwd.de/pub/CDC/grids_germany/hourly/radolan/README.txt}
 #' All layers (following \code{selection} if given) in all .tar.gz files are 
 #' combined into a raster stack with \code{raster::\link[raster]{stack}}.\cr
 #' To project the data, use \code{\link{projectRasterDWD}}
@@ -594,20 +895,17 @@ return(invisible(r))
 #' 
 #' # File selection and download:
 #' datadir <- localtestdir()
-#' # 2019-05-18, hourly radolan files not yet copied to new ftp, hence:
-#' gridbase <- "ftp://ftp-cdc.dwd.de/pub/CDC/grids_germany" 
 #' radbase <- paste0(gridbase,"/hourly/radolan/historical/asc/")
 #' radfile <- "2018/RW-201809.tar" # 25 MB to download
 #' file <- dataDWD(radfile, base=radbase, joinbf=TRUE, dir=datadir,
 #'                 dfargs=list(mode="wb"), read=FALSE) # download with mode=wb!!!
 #'                 
 #' #asc <- readDWD(file) # 4 GB in mem. ~ 20 secs unzip, 30 secs read, 10 min divide
-#' asc <- readDWD(file, selection=1:20, dividebyten=TRUE)
+#' asc <- readDWD(file, selection=1:5, dividebyten=TRUE)
 #' asc <- projectRasterDWD(asc)
 #' 
 #' raster::plot(asc[[1]], main=names(asc)[1])
-#' data(DEU)
-#' raster::plot(DEU, add=TRUE)
+#' addBorders()
 #' 
 #' rng <- range(raster::cellStats(asc, "range"))
 #' nframes <- 3 # raster::nlayers(asc) for all (time intensive!)
@@ -648,9 +946,7 @@ return(invisible(r))
 readDWD.asc <- function(file, exdir=NULL, dividebyten=TRUE, 
                         selection=NULL, progbar=TRUE, ...)
 {
-if(!requireNamespace("raster", quietly=TRUE))
-stop("To use rdwd:::readDWD.asc, please first install raster:",
-     "   install.packages('raster')", call.=FALSE)
+checkSuggestedPackage("raster", "rdwd:::readDWD.asc")
 if(progbar) lapply <- pbapply::pblapply
 # prepare to untar data (two layers):
 fn <- tools::file_path_sans_ext(basename(file))
@@ -688,87 +984,4 @@ dat <- raster::stack(dat)
 #
 # output:
 return(invisible(dat))
-}
-
-
-
-# helper functionality ----
-
-#' @title project DWD raster data
-#' @description Set projection and extent for DWD raster data. Optionally (and
-#' per default) also reprojects to latlon data.
-#' The internal defaults are extracted from the
-#' Kompositformatbeschreibung at \url{https://www.dwd.de/DE/leistungen/radolan/radolan.html},
-#' as provided 2019-04 by Antonia Hengst.
-#' @return Raster object with projection and extent, invisible
-#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, May 2019
-#' @seealso \code{raster::\link[raster]{crs}}, 
-#'          \code{raster::\link[raster]{projection}},
-#'          \code{raster::\link[raster]{extent}},
-#'          \code{raster::\link[raster]{projectRaster}},
-#'          \code{\link{readDWD.binary}, \link{readDWD.raster}, \link{readDWD.asc}}
-#' @keywords aplot
-#' @export
-#' @examples
-#' # To be used after readDWD.binary, readDWD.raster, readDWD.asc
-#' @param r        Raster object
-#' @param proj     Desired projection. Can be a \code{raster::\link[raster]{crs}} output,
-#'                 a projection character string (will be passed to \code{crs}), 
-#'                 "radolan" or "seasonal" with internal defaults defined per DWD standard, 
-#'                 or NULL to not set proj+extent but still consider \code{latlon}.
-#'                 DEFAULT: "radolan"
-#' @param extent   Desired \code{\link[raster]{extent}}. Can be an extent object,
-#'                 a vector with 4 numbers, or "radolan" / "rw" / "seasonal" 
-#'                 with internal defaults.
-#'                 DEFAULT: "radolan"
-#' @param latlon   Logical: reproject \code{r} to lat-lon crs? DEFAULT: TRUE
-#'
-projectRasterDWD <- function(r, proj="radolan", extent="radolan", latlon=TRUE)
-{
-# package check
-if(!requireNamespace("raster", quietly=TRUE))
- stop("To use rdwd::projectRasterDWD, please first install raster:",
-      "   install.packages('raster')", call.=FALSE)
-#
-if(!is.null(proj))
-{
-# Default projection and extent:
-# Projection as per Kompositbeschreibung 1.5
-p_radolan <- "+proj=stere +lat_0=90 +lat_ts=90 +lon_0=10 +k=0.93301270189
-              +x_0=0 +y_0=0 +a=6370040 +b=6370040 +to_meter=1000 +no_defs"
-# ftp://opendata.dwd.de/climate_environment/CDC/grids_germany/seasonal/air_temperature_max/
-#       BESCHREIBUNG_gridsgermany_seasonal_air_temperature_max_de.pdf
-p_seasonal <- "+proj=tmerc +lat_0=0 +lon_0=9 +k=1 +x_0=3500000 +y_0=0 
-               +ellps=bessel +datum=potsdam +units=m +no_defs"
-#
-if(is.character(proj))
-  {   
-  if(proj=="radolan")  proj <- p_radolan else
-  if(proj=="seasonal") proj <- p_seasonal
-  }
-if(!inherits(proj, "CRS")) proj <- raster::crs(proj)
-#
-# Extent as per Kompositbeschreibung 1.4 / seasonal DESCRIPTION pdf:
-e_radolan <- c(-523.4622,376.5378,-4658.645,-3758.645)
-e_rw <-      c(-443.4622,456.5378,-4758.645,-3658.645) # 1.2, Abb 3
-# e_radolan <- c(-673.4656656,726.5343344,-5008.642536,-3508.642536) # ME
-e_seasonal <- c(3280414.71163347, 3934414.71163347, 5237500.62890625, 6103500.62890625)
-if(is.character(extent))
-  {  
-  if(extent=="radolan")  extent <- e_radolan else
-  if(extent=="rw")       extent <- e_rw      else
-  if(extent=="seasonal") extent <- e_seasonal
-  }
-if(!inherits(extent,"Extent")) extent <- raster::extent(extent)
-#
-# actually project:
-raster::projection(r) <- proj
-raster::extent(    r) <- extent
-} # end if not null proj
-#
-# lat-lon projection:
-proj_ll <- raster::crs("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
-if(latlon) r <- raster::projectRaster(r, crs=proj_ll)
-# invisible output:
-return(invisible(r))
 }

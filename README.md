@@ -1,10 +1,12 @@
 # rdwd
+<img src="misc/hex/hex.png" width="104" height="120">
+
 `rdwd` is an [R](https://www.r-project.org/) package to select, download and read climate data from the 
-German Weather Service (Deutscher Wetterdienst, DWD).
-They provide thousands of datasets with weather observations online at  
-<ftp://opendata.dwd.de/climate_environment/CDC/observations_germany/climate>  
-Since May 2019, `rdwd` also supports reading the Radolan (binary) raster data at  
-<ftp://opendata.dwd.de/climate_environment/CDC/grids_germany>
+German Weather Service (Deutscher Wetterdienst, DWD).  
+The DWD provides thousands of datasets with weather observations online at 
+[opendata.dwd.de](https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate).  
+Since May 2019, `rdwd` also supports reading the Radolan (binary) raster data at 
+[grids_germany](https://opendata.dwd.de/climate_environment/CDC/grids_germany).
 
 `rdwd` is available on CRAN:
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version-last-release/rdwd)](https://cran.r-project.org/package=rdwd) 
@@ -14,18 +16,25 @@ Since May 2019, `rdwd` also supports reading the Radolan (binary) raster data at
 
 It has been presented at [FOSDEM 2017](https://fosdem.org/2017/schedule/event/geo_weather/)
 and [UseR!2017](https://user2017.sched.com/event/Axr3/rdwd-manage-german-weather-observations) in Brussels,
-featured in Rstudios [data package list](https://www.rstudio.com/rviews/2017/02/17/january-new-data-packages/) 
+featured in Rstudios [data package list](https://rviews.rstudio.com/2017/02/17/january-new-data-packages) 
 and written about in [OSOR](https://joinup.ec.europa.eu/community/osor/news/study-german-weather-data-made-easy-rdwd).
 
-Usage of the package usually looks something like the following:
+
+### Documentation
+
+A vignette with more information, examples, use cases and an interactive map of the DWD stations
+can be found at <https://bookdown.org/brry/rdwd>
+
+
+### Usage
+
+Usage for observational weather data from the measuring stations usually looks something like the following:
 
 ```R
-# download and install the rdwd package (only needed once):
+# Download and install (once only):
 install.packages("rdwd")
-# if wanted, latest development version, incl. vignettes:
-remotes::install_github("brry/rdwd", build_opts="--no-manual")
 
-# load the package into library (needed in every R session):
+# Load the package into library (needed in every R session):
 library(rdwd)
 
 # select a dataset (e.g. last year's daily climate data from Potsdam City):
@@ -41,23 +50,37 @@ clim <- readDWD(file, varnames=TRUE)
 str(clim)
 ```
 
-You can also select datasets with the [interactive map](https://cran.r-project.org/package=rdwd/vignettes/mapDWD.html).  
-A general introduction to `rdwd` is available in the [package vignette](https://cran.r-project.org/package=rdwd/vignettes/rdwd.html).  
-Long actual-usage examples can be found in the [use cases vignette](https://cran.r-project.org/package=rdwd/vignettes/cases.html).
+For data interpolated onto a 1 km raster, including radar data up to the last hour,
+see the corresponding [chapter](https://bookdown.org/brry/rdwd/raster-data.html) in the vignette.
 
+
+### Installation
+
+#### Normal
 ```R
-vignette("mapDWD") # interactive map, likely faster than CRAN link above
-vignette("rdwd")   # package instructions and examples
-vignette("cases")  # longer use case examples
+install.packages("rdwd")
 ```
 
+#### Latest version
+```R
+if(!requireNamespace("remotes", quietly=TRUE)) install.packages("remotes")
+remotes::install_github("brry/rdwd")
+```
 
-# help
-I'm looking for someone to help implement multiple downloads in [dataDWD](https://github.com/brry/rdwd/blob/master/R/dataDWD.R#L176) via e.g. `curl` or `wget`.
-The requirements are as follows:
+#### Full
+Suggested (not mandatory) dependencies:  
+```R
+install.packages("rdwd", dependencies="Suggests") 
+```
 
-* works cross-platform
-* is called from R
-* has as few dependencies as possible
-* does not fail completely at a single failure, e.g. can be called within `try` 
-* optimally enables a progress bar
+- `RCurl` for indexFTP and selectDWD(..., current=TRUE)
+- `data.table` for readDWD(..., fread=TRUE)
+- `raster`, `R.utils`, `ncdf4`, `dwdradar` for readDWD with gridded data
+- `readr` for readDWD.stand(..., fast=TRUE)
+- `knitr`, `rmarkdown`, `testthat` for recreating the vignette and local testing
+- `leaflet`, `OSMscale` for interactive/static maps, see [OSMscale installation tips](https://github.com/brry/OSMscale#installation)
+
+Note: on Linux (Ubuntu), install `RCurl` via the terminal (CTRL+ALT+T, note lowercase rcurl):
+```
+sudo apt install r-cran-rcurl
+```

@@ -12,7 +12,8 @@
 #' @return invisible data.frame (or if meta=TRUE, list with two data.frames)
 #' with a number of columns inferred from the paths. Each is also written to disc.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct-Nov 2016, June 2017
-#' @seealso \code{\link{indexFTP}}, \code{\link{fileIndex}}, \code{\link{metaIndex}}, \code{\link{selectDWD}}
+#' @seealso \code{\link{indexFTP}}, \code{\link{updateIndexes}}
+#' \code{\link{index}}, \code{\link{selectDWD}}
 #' @keywords manip
 #' @importFrom berryFunctions l2df convertUmlaut newFilename sortDF traceCall
 #' @importFrom utils write.table
@@ -29,11 +30,6 @@
 #' ind2 <- createIndex(c(link,link2,link3), dir=tempdir(), meta=TRUE)
 #' lapply(ind2, head)
 #' }
-#' 
-#' # For real usage, see last part of
-#' if(interactive())
-#' browseURL("https://github.com/brry/rdwd/blob/master/R/rdwd-package.R")
-#' # where the Indexes are added to the package
 #' 
 #' @param paths Char: vector of DWD paths returned by \code{\link{indexFTP}} called
 #'              with the same \code{base} value as this function
@@ -53,6 +49,11 @@
 #'              write \code{\link{metaIndex}}.
 #'              Use \code{mname=""} to suppress writing. DEFAULT: "metaIndex.txt"
 #' @param gname Filename for \code{\link{geoIndex}}. DEFAULT: "geoIndex.txt"
+#' @param overwrite Logical: Overwrite existing \code{fname / mname / gname} files? 
+#'              If not, "_n" is added to the filenames, see 
+#'              \code{berryFunctions::\link[berryFunctions]{newFilename}}.
+#'              DEFAULT: FALSE
+#' @param checkwarn Logical: warn about \code{\link{checkIndex}} issues? DEFAULT: TRUE
 #' @param quiet Logical: Suppress messages about progress and filenames? DEFAULT: FALSE
 #' @param \dots Further arguments passed to \code{\link{dataDWD}} for the meta part.
 #' 
@@ -65,6 +66,8 @@ meta=FALSE,
 metadir="meta",
 mname="metaIndex.txt",
 gname="geoIndex.txt",
+overwrite=FALSE,
+checkwarn=TRUE,
 quiet=FALSE,
 ...
 )
@@ -79,7 +82,7 @@ fileIndex <- gsub("y/solar/", "y/solar//", paths) # hourly and daily only
 fileIndex <- gsub("multi_annual/", "multi_annual//", fileIndex)
 fileIndex <- gsub("subdaily/standard_format/", "subdaily/standard_format//", fileIndex)
 # remove leading slashes:
-fileIndex <- ifelse(substr(fileIndex,1,1)=="/", substr(fileIndex,2,1e4), fileIndex)
+fileIndex <- sub("^/","",fileIndex)
 prec1min <- substr(fileIndex,1,33) == "1_minute/precipitation/historical"
 prec1min <- substr(fileIndex,1,37) != "1_minute/precipitation/historical/ein" & prec1min
 any1min <- any(prec1min)
@@ -113,6 +116,11 @@ id <- ifelse(substr(file,1,2)=="kl", substr(file,4,8), id) # res==subdaily
 fileIndex$id <- suppressWarnings(as.integer(id))
 rm(id, per, sol, zip)
 #
+# standard_format hist/recent
+sf <- fileIndex$var=="standard_format" & fileIndex$per==""
+fileIndex[sf & grepl("akt.txt", paths), "per"] <- "recent"
+fileIndex[sf & grepl("_bis_"  , paths), "per"] <- "historical"
+#
 # start and end of time series (according to file name):
 if(!quiet) messaget("Extracting time series range from filenames...")
 ziphist <- fileIndex$per=="historical"  & info[,1]=="zip"
@@ -120,9 +128,11 @@ multi <-  fileIndex$res=="multi_annual" & info[,1]=="txt" & info[,3]!="Stationsl
 # actual selection:
 fileIndex$start <- ""
 fileIndex$start <- ifelse(ziphist|multi, info[,4], fileIndex$start)
+fileIndex$start <- as.Date(fileIndex$start, "%Y%m%d")
 # Analogous for end:
 fileIndex$end <- ""
 fileIndex$end <- ifelse(ziphist|multi, info[,3], fileIndex$end)
+fileIndex$end <- as.Date(fileIndex$end, "%Y%m%d")
 #
 # is the file a metafile?
 ma <- fileIndex$res=="multi_annual"
@@ -140,7 +150,7 @@ owd <- dirDWD(dir, quiet=quiet|fname=="" )
 on.exit(setwd(owd), add=TRUE)
 if(fname!="")
   {
-  outfile <- newFilename(fname, mid=" ", quiet=quiet)
+  outfile <- newFilename(fname, mid=" ", quiet=quiet, ignore=overwrite)
   write.table(fileIndex, file=outfile, sep="\t", row.names=FALSE, quote=FALSE)
   }
 # Potential (DEFAULT) output:
@@ -161,7 +171,8 @@ if(sum(sel)<2) stop(traceCall(1, "in ", ": "),
               "There need to be at least two 'Beschreibung' files. (There is ",
               sum(sel),")", call.=FALSE)
 # download and read those files:
-metas <- dataDWD(fileIndex[sel, "path"], base=base, joinbf=TRUE, dir=metadir, ...)
+metas <- dataDWD(fileIndex[sel, "path"], base=base, joinbf=TRUE, dir=metadir, 
+                 overwrite=overwrite, stand=FALSE, ...)
 for(i in seq_along(metas))
   {
   metas[[i]]$res <- fileIndex[sel, "res"][i]
@@ -195,10 +206,14 @@ metaComb <- paste(metaIndex$Stations_id, metaIndex$res, metaIndex$var, metaIndex
 fileComb <- paste(           filestatID, fileIndex$res, fileIndex$var, fileIndex$per, sep="/")
 metaIndex$hasfile <- metaComb  %in% fileComb
 #
+# convert date columns to date:
+metaIndex$von_datum <- as.Date(as.character(metaIndex$von_datum),"%Y%m%d")
+metaIndex$bis_datum <- as.Date(as.character(metaIndex$bis_datum),"%Y%m%d")
+
 # Write to disc
 if(mname!="")
   {
-  outfile <- newFilename(mname, mid=": ", quiet=quiet)
+  outfile <- newFilename(mname, mid=": ", quiet=quiet, ignore=overwrite)
   write.table(metaIndex, file=outfile, sep="\t", row.names=FALSE, quote=FALSE)
   }
 #
@@ -268,12 +283,12 @@ rownames(geoIndex) <- NULL
 # Write to disc:
 if(gname!="")
   {
-  outfile <- newFilename(gname, mid=": ", quiet=quiet)
+  outfile <- newFilename(gname, mid=": ", quiet=quiet, ignore=overwrite)
   write.table(geoIndex, file=outfile, sep="\t", row.names=FALSE, quote=FALSE)
   }
 #
 # Check all indexes:
-checks <- checkIndex(fileIndex, metaIndex, geoIndex, fast=TRUE)
+checks <- checkIndex(fileIndex, metaIndex, geoIndex, fast=TRUE, warn=checkwarn)
 #
 # Output -----------------------------------------------------------------------
 if(!quiet) messaget("Done.")

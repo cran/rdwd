@@ -4,10 +4,12 @@
 \alias{readDWD}
 \title{Process data from the DWD CDC FTP Server}
 \usage{
-readDWD(file, progbar = TRUE, fread = FALSE, varnames = FALSE,
-  format = NA, tz = "GMT", dividebyten = TRUE,
-  meta = grepl(".txt$", file), multia = grepl("Standort.txt$", file),
+readDWD(file, quiet = FALSE, progbar = !quiet, fread = FALSE,
+  varnames = FALSE, var = "", format = NA, tz = "GMT",
+  dividebyten = TRUE, multia = grepl("Standort.txt$", file),
+  meta = grepl(".txt$", file), stand = grepl("standard_format", file),
   binary = grepl(".tar.gz$", file), raster = grepl(".asc.gz$", file),
+  nc = grepl(".nc.gz$", file), radar = grepl(".gz$", file),
   asc = grepl(".tar$", file), ...)
 }
 \arguments{
@@ -16,9 +18,11 @@ readDWD(file, progbar = TRUE, fread = FALSE, varnames = FALSE,
 e.g. "~/DWDdata/tageswerte_KL_02575_akt.zip" or
 "~/DWDdata/RR_Stundenwerte_Beschreibung_Stationen.txt"}
 
+\item{quiet}{Logical: suppress messages? DEFAULT: FALSE}
+
 \item{progbar}{Logical: present a progress bar with estimated remaining time?
 If missing and length(file)==1, progbar is internally set to FALSE.
-DEFAULT: TRUE}
+DEFAULT: !quiet}
 
 \item{fread}{Logical (vector): read fast? See \code{\link{readDWD.data}}.
 DEFAULT: FALSE (some users complain it doesn't work on their PC)}
@@ -26,21 +30,28 @@ DEFAULT: FALSE (some users complain it doesn't work on their PC)}
 \item{varnames}{Logical (vector): Expand column names? 
 See \code{\link{readDWD.data}}. DEFAULT: FALSE}
 
+\item{var}{var for \code{\link{readDWD.nc}}. DEFAULT: ""}
+
 \item{format, tz}{Format and time zone of time stamps, see \code{\link{readDWD.data}}}
 
 \item{dividebyten}{Logical (vector): Divide the values in raster files by ten?
 Used in \code{\link{readDWD.raster}} and \code{\link{readDWD.asc}}.
 DEFAULT: TRUE}
 
+\item{multia}{Logical (vector): is the \code{file} a multi_annual file?
+Overrides \code{meta}, so set to FALSE manually if 
+\code{\link{readDWD.meta}} needs to be called on a (manually renamed) 
+Beschreibung file ending with "Standort.txt". 
+See \code{\link{readDWD.multia}}.
+DEFAULT: TRUE for each file ending in "Standort.txt"}
+
 \item{meta}{Logical (vector): is the \code{file} a meta file (Beschreibung.txt)?
 See \code{\link{readDWD.meta}}.
 DEFAULT: TRUE for each file ending in ".txt"}
 
-\item{multia}{Logical (vector): is the \code{file} a multi_annual file?
-Overrides \code{meta}, so set to FALSE manually if 
-\code{\link{readDWD.meta}} needs to be called on a file ending
-with "Standort.txt". See \code{\link{readDWD.multia}}.
-DEFAULT: TRUE for each file ending in "Standort.txt"}
+\item{stand}{Logical (vector): is the \code{file} a subdaily/standard_format file?
+See \code{\link{readDWD.stand}}.
+DEFAULT: TRUE fo files containing "standard_format" in the name.}
 
 \item{binary}{Logical (vector): does the \code{file} contain binary files?
 See \code{\link{readDWD.binary}}.
@@ -49,6 +60,14 @@ DEFAULT: TRUE for each file ending in ".tar.gz"}
 \item{raster}{Logical (vector): does the \code{file} contain a raster file?
 See \code{\link{readDWD.raster}}.
 DEFAULT: TRUE for each file ending in ".asc.gz"}
+
+\item{nc}{Logical (vector): does the \code{file} contain a netcdf file?
+See \code{\link{readDWD.nc}}.
+DEFAULT: TRUE for each file ending in ".nc.gz"}
+
+\item{radar}{Logical (vector): does the \code{file} contain a single binary file?
+See \code{\link{readDWD.radar}}.
+DEFAULT: TRUE for each file ending in ".gz"}
 
 \item{asc}{Logical (vector): does the \code{file} contain asc files?
 See \code{\link{readDWD.asc}}.
@@ -60,23 +79,23 @@ documented in each internal function.}
 }
 \value{
 Invisible data.frame of the desired dataset, 
-        or a named list of data.frames if length(file) > 1.
-        \code{\link{readDWD.binary}} returns a vector, 
+        or a named list of data.frames if length(file) > 1.\cr
+        \code{\link{readDWD.binary}}, 
         \code{\link{readDWD.raster}} and \code{\link{readDWD.asc}} 
         return raster objects instead of data.frames.
 }
 \description{
 Read climate data that was downloaded with \code{\link{dataDWD}}.
 The data is unzipped and subsequently, the file is read, processed and
-returned as a data.frame.\cr
+returned as a data.frame / raster object.\cr
 New users are advised to set \code{varnames=TRUE} to obtain more informative
 column names.\cr\cr
 \code{readDWD} will call internal (but documented) functions depending on the
-arguments \code{meta, binary, raster, multia, asc}:\cr
-to read observational data: \code{\link{readDWD.data},
-         \link{readDWD.meta}, \link{readDWD.multia}}\cr
-to read interpolated gridded data: \code{\link{readDWD.binary},
-         \link{readDWD.raster}, \link{readDWD.asc}}\cr
+arguments \code{multia, meta, stand, binary, raster, nc, radar, asc}:\cr
+to read observational data (\href{https://bookdown.org/brry/rdwd/available-datasets.html}{overview}): \code{\link{readDWD.data},
+         \link{readDWD.multia}, \link{readDWD.stand}, \link{readDWD.meta}}\cr
+to read gridded data (\href{https://bookdown.org/brry/rdwd/raster-data.html}{overview}): \code{\link{readDWD.binary},
+         \link{readDWD.raster}, \link{readDWD.radar}, \link{readDWD.nc}, \link{readDWD.asc}}\cr
 Not all arguments to \code{readDWD} are used for all functions, e.g. 
 \code{fread} is used only by \code{.data}, while \code{dividebyten} 
 is used in \code{.raster} and \code{.asc}.\cr\cr
@@ -89,7 +108,8 @@ also be a vector and will be recycled to the length of \code{file}.
 }
 \seealso{
 \code{\link{dataDWD}}, \code{\link{readVars}}, 
-         \code{\link{readMeta}}, \code{\link{selectDWD}}
+         \code{\link{readMeta}}, \code{\link{selectDWD}}\cr
+         \url{https://bookdown.org/brry/rdwd}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Jul-Oct 2016, Winter 2018/19

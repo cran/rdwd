@@ -20,7 +20,7 @@
 #' 
 #' @return a vector with file paths
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct 2016
-#' @seealso \code{\link{createIndex}}
+#' @seealso \code{\link{createIndex}}, \code{\link{updateIndexes}}
 #' @keywords file
 #' @importFrom stats runif
 #' @importFrom pbapply pblapply
@@ -39,7 +39,7 @@
 #'                Leading slashes will be removed. 
 #'                Use \code{folder=""} to search at the location of \code{base} itself.
 #'                If \code{folder} is "currentfindex" (the default) and \code{base} 
-#'                is the default, code{folder} is changed to all observational 
+#'                is the default, \code{folder} is changed to all observational 
 #'                folders listed in the current tree file at 
 #'                \url{ftp://opendata.dwd.de/weather/tree.html}. With "currentgindex" 
 #'                and \code{gridbase}, the grid folders in the tree are used.
@@ -80,9 +80,7 @@ verbose=FALSE
 )
 {
 # Check if RCurl is available:
-if(!requireNamespace("RCurl", quietly=TRUE))
-  stop("The R package 'RCurl' is not available. rdwd::indexFTP can not obtain file list.\n",
-       "install.packages('RCurl')       to enable this.")
+checkSuggestedPackage("RCurl", "rdwd::indexFTP")
 # change folder:
 if(all(folder %in% c("currentfindex","currentgindex")) & base %in% c(dwdbase, gridbase))
   {
@@ -148,6 +146,7 @@ getURL_ffe <- function(ff_row)
  # carriage return / newline is OS-dependent:
  p <- unlist(strsplit(p,"[\n\r]")) # http://stackoverflow.com/a/40763124/1587132
  p <- p[nchar(p)>0]
+ p <- p[!grepl("latest-dwd---bin", p)] # for opendata.dwd.de/weather/radar/radolan/
  #
  isdir <- substr(p,1,1) =="d" # directory, else file
  pnames <- read.table(text=p, stringsAsFactors=FALSE)

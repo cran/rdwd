@@ -15,7 +15,7 @@ DWDdata/daily_radolan_historical_bin_2017_SF201712.tar.gz}
 will be unpacked with \code{\link{untar}}. Note that exdir
 size will be around 1.1 GB. exdir can contain other files, 
 these will be ignored for the actual reading with 
-\code{\link{readRadarFile}} (function not exported, but documented).
+\code{dwdradar::\link[dwdradar]{readRadarFile}}.
 DEFAULT exdir: sub(".tar.gz$", "", file)}
 
 \item{toraster}{Logical: convert output (list of matrixes + meta informations)
@@ -30,7 +30,7 @@ DEFAULT: TRUE}
 \item{selection}{Optionally read only a subset of the ~24*31=744 files.
 Called as \code{f[selection]}. DEFAULT: NULL (ignored)}
 
-\item{\dots}{Further arguments passed to \code{\link{readRadarFile}}, 
+\item{\dots}{Further arguments passed to \code{dwdradar::\link[dwdradar]{readRadarFile}}, 
 i.e. \code{na} and \code{clutter}}
 }
 \value{
@@ -57,8 +57,7 @@ if(length(SF_rad)!=2) stop("length(SF_rad) should be 2, but is ", length(SF_rad)
 
 SF_radp <- projectRasterDWD(SF_rad$data)
 raster::plot(SF_radp[[1]], main=SF_rad$meta$date[1])
-data(DEU)
-raster::plot(DEU, add=TRUE)
+addBorders()
 
 
 # RW file as example: ----
@@ -71,7 +70,7 @@ if(!file.exists(RW_exdir)) RW_exdir <- tempdir()
 RW_rad <- readDWD(RW_file, selection=1:10, exdir=RW_exdir)
 RW_radp <- projectRasterDWD(RW_rad$data, extent="rw")
 raster::plot(RW_radp[[1]], main=RW_rad$meta$date[1])
-raster::plot(DEU, add=TRUE)
+addBorders()
 
 # ToDo: why are values + patterns not the same?
 
@@ -81,13 +80,13 @@ head(grep("historical", gridIndex, value=TRUE))
 }
 }
 \seealso{
-\code{\link{readDWD}}\cr
+\code{\link{readDWD}}, especially \code{\link{readDWD.radar}}\cr
   \url{https://wradlib.org} for much more extensive radar analysis in Python\cr
   Kompositformatbeschreibung at \url{https://www.dwd.de/DE/leistungen/radolan/radolan.html}
   for format description
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Dec 2018. 
-        Significant input for the underlying \code{\link{readRadarFile}} came
+        Significant input for the underlying \code{dwdradar::\link[dwdradar]{readRadarFile}} came
         from Henning Rust & Christoph Ritschel at FU Berlin.
 }

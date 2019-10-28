@@ -24,7 +24,9 @@ Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}}
 
 \item{force}{Logical (vector): always download, even if the file already exists in \code{dir}?
 Use NA to force re-downloading files older than 24 hours.
-If FALSE, it is still read (or name returned). DEFAULT: FALSE}
+Use a numerical value to force after that amount of hours.
+Note you might want to set \code{overwrite=TRUE} as well.
+If FALSE, the file is still read (or name returned). DEFAULT: FALSE}
 
 \item{overwrite}{Logical (vector): if force=TRUE, overwrite the existing file
 rather than append "_1"/"_2" etc to the filename? DEFAULT: FALSE}
@@ -68,7 +70,9 @@ Presuming downloading and processing were successful:
 \description{
 Get climate data from the German Weather Service (DWD) FTP-server.
 The desired .zip (or .txt) dataset is downloaded into \code{dir}.
-If \code{read=TRUE}, it is also read, processed and returned as a data.frame.
+If \code{read=TRUE}, it is also read, processed and returned as a data.frame.\cr
+To solve "errors in download.file: cannot open URL", see 
+\url{https://bookdown.org/brry/rdwd/station-selection.html#fileindex}.\cr
 }
 \examples{
 \dontrun{ ## requires internet connection
@@ -103,13 +107,14 @@ potsdam <- potsdam[!duplicated(potsdam$MESS_DATUM),]
 #links <- selectDWD(res="daily", var="solar")
 #sol <- dataDWD(links, sleep=20) # random waiting time after download (0 to 20 secs)
 
-# Real life examples can be found in the use cases vignette:
-vignette("cases")
+# Real life examples can be found in the use cases section of the vignette:
+# browseURL("https://bookdown.org/brry/rdwd")
 }
 
 }
 \seealso{
-\code{\link{selectDWD}}. \code{\link{readDWD}}, \code{\link{download.file}}.
+\code{\link{selectDWD}}. \code{\link{readDWD}}, \code{\link{download.file}}.\cr
+         \url{https://bookdown.org/brry/rdwd}\cr
          Helpful for plotting: \code{berryFunctions::\link[berryFunctions]{monthAxis}},
          see also \code{berryFunctions::\link[berryFunctions]{climateGraph}}
 }

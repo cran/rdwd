@@ -19,8 +19,7 @@ nearbyStations(lat, lon, radius, res = NA, var = NA, per = NA,
 \code{\link{selectDWD}}. Each can be a vector of entries.
 DEFAULTS: NA (ignored)}
 
-\item{mindate}{Minimum dataset ending date (as per metadata).
-Integer in the form of YYYYMMDD, e.g. 20170301. DEFAULT: NA}
+\item{mindate}{Minimum dataset ending date (as per metadata). DEFAULT: NA}
 
 \item{hasfileonly}{Logical: only return entries for which there is an
 open-access file available? DEFAULT: TRUE}
@@ -42,11 +41,12 @@ Select DWD stations within a given radius around a set of coordinates
 
 m <- nearbyStations(49.211784, 9.812475, radius=30,
     res=c("daily","hourly"), var= c("precipitation","more_precip","kl") ,
-    mindate=20160530, statname="Braunsbach catchment center")
+    mindate=as.Date("2016-05-30"), statname="Braunsbach catchment center")
 # View(m)
     
-# see the use cases vignette for a continued example of this:
-vignette("cases")
+# for a continued example of this, see the vignette in chapter
+# use case: plot all rainfall values around a given point
+# browseURL("https://bookdown.org/brry/rdwd")
 
 }
 \seealso{

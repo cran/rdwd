@@ -12,7 +12,7 @@ DWDdata/grids_germany/seasonal/air_temperature_mean/
 16_DJF_grids_germany_seasonal_air_temp_mean_188216.asc.gz}
 
 \item{gargs}{Named list of arguments passed to 
-\code{R.utils::\link[R.utils]{gunzip}}. The internal 
+\code{R.utils::\link[R.utils:compressFile]{gunzip}}. The internal 
 defaults are: \code{remove=FALSE} (recommended to keep this
 so \code{file} does not get deleted) and \code{skip=TRUE}
 (which reads previously unzipped files as is).
@@ -49,8 +49,7 @@ raster::plot(rf)
 
 rfp <- projectRasterDWD(rf, proj="seasonal", extent=rf@extent)
 raster::plot(rfp)
-data(DEU)
-raster::plot(DEU, add=TRUE)
+addBorders()
 
 testthat::expect_equal(raster::cellStats(rf, range), c(-8.2,4.4))
 rf10 <- readDWD(localfiles[1], dividebyten=FALSE)

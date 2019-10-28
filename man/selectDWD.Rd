@@ -5,10 +5,11 @@
 \title{Select data from the DWD CDC FTP Server}
 \usage{
 selectDWD(name = "", res = NA, var = NA, per = NA,
-  exactmatch = TRUE, mindex = metaIndex, id = findID(name, exactmatch
-  = exactmatch, mindex = mindex), base = dwdbase, findex = fileIndex,
-  current = FALSE, meta = FALSE, meta_txt_only = TRUE,
-  outvec = any(per \%in\% c("rh", "hr")), ...)
+  exactmatch = TRUE, mindex = metaIndex, quiet = FALSE,
+  id = findID(name, exactmatch = exactmatch, mindex = mindex, quiet =
+  quiet), base = dwdbase, findex = fileIndex, current = FALSE,
+  meta = FALSE, meta_txt_only = TRUE, outvec = any(per \%in\% c("rh",
+  "hr")), ...)
 }
 \arguments{
 \item{name}{Char: station name(s) passed to \code{\link{findID}}, along with
@@ -39,6 +40,8 @@ with \code{\link{==}})? Else with \code{\link{grepl}}. DEFAULT: TRUE}
 
 \item{mindex}{Single object: Index with metadata passed to \code{\link{findID}}.
 DEFAULT: \code{rdwd:::\link{metaIndex}}}
+
+\item{quiet}{Suppress id length warnings?}
 
 \item{id}{Char/Number: station ID with or without leading zeros, e.g. "00614" or 614.
 Is internally converted to an integer, because some DWD meta data
@@ -72,14 +75,18 @@ instead of a list, return a vector? (via \code{\link{unlist}}).
 DEFAULT: \code{per \%in\% c("rh","hr")}}
 
 \item{\dots}{Further arguments passed to \code{\link{indexFTP}} if \code{current=TRUE},
-like dir, quiet}
+except folder and base.}
 }
 \value{
 Character string with file path and name(s) in the format
         "base/res/var/per/filename.zip"
 }
 \description{
-Select files for downloading with \code{\link{dataDWD}}.
+Select files for downloading with \code{\link{dataDWD}}.\cr
+The available folders with datasets are listed at
+\url{https://bookdown.org/brry/rdwd/available-datasets.html}.
+To use an updated index (if necessary), see 
+\url{https://bookdown.org/brry/rdwd/station-selection.html#fileindex}.\cr\cr
 All arguments (except for \code{mindex}, \code{findex} and \code{base})
 can be a vector and will be recycled to the maximum length of all arguments.
 If that length > 1, the output is a list of filenames (or vector if \code{outvec=TRUE}).\cr
@@ -100,50 +107,6 @@ default interactive selection.\cr
 For case 3 and 4 (\bold{path} given), you can set \code{meta=TRUE}.
 Then selectDWD will return the name of the station description file at \bold{path}.
 This is why case 3 with \code{meta=FALSE} only returns the data file names (ending in .zip).\cr\cr\cr
-The following folders in \bold{\code{res/var/per}} notation
-(resolution/variable/period) are available at \code{\link{dwdbase}}:\cr
-"<" signifies a split into the folders \code{per} = "recent" and "historical".\cr
-"<<" signifies a split into the folders \code{per} = "now", recent", "historical" and "meta_data".\cr
-"-" signifies that there are no further sub-folders. \cr
-Please note that both "solar" (-/<<) and "sun" (<) are available!
-\tabular{lllll}{
-\code{res}=\bold{10_minutes} \tab | \code{res}=\bold{hourly} \tab | \code{res}=\bold{daily} \tab | \code{res}=\bold{monthly} \tab | \code{res}=\bold{annual} \cr
-\code{var=}            \tab                      \tab                      \tab                 \tab                 \cr
-                       \tab |                    \tab | kl <               \tab | kl <          \tab | kl <          \cr
-                       \tab |                    \tab | more_precip <      \tab | more_precip < \tab | more_precip < \cr
-air_temperature <<     \tab | air_temperature <  \tab |                    \tab |               \tab |               \cr
-extreme_temperature << \tab |                    \tab |                    \tab |               \tab |               \cr
-extreme_wind <<        \tab |                    \tab |                    \tab |               \tab |               \cr
-                       \tab | cloudiness <       \tab |                    \tab |               \tab |               \cr
-                       \tab | cloud_type <       \tab |                    \tab |               \tab |               \cr
-                       \tab | dew_point <        \tab |                    \tab |               \tab |               \cr
-precipitation <<       \tab | precipitation <    \tab |                    \tab |               \tab |               \cr
-                       \tab | pressure <         \tab |                    \tab |               \tab |               \cr
-                       \tab | soil_temperature < \tab | soil_temperature < \tab |               \tab |               \cr
-solar <<               \tab | solar -            \tab | solar -            \tab |               \tab |               \cr
-                       \tab | sun <              \tab |                    \tab |               \tab |               \cr
-                       \tab | visibility <       \tab |                    \tab |               \tab |               \cr
-                       \tab |                    \tab | water_equiv <      \tab |               \tab |               \cr
-wind <<                \tab | wind <             \tab |                    \tab |               \tab |               \cr
-                       \tab | wind_synop <       \tab |                    \tab |               \tab |               \cr
-}
-Please note that \code{1_minute/precipitation/historical} has subfolders for each year.
-\tabular{lll}{
-\code{res}=\bold{1_minute} \tab | \code{res}=\bold{multi_annual} \tab | \code{res}=\bold{subdaily} \cr 
-\code{var=}      \tab                \tab                     \cr
-precipitation << \tab |              \tab |                   \cr
-                 \tab | mean_61-90 - \tab |                   \cr
-                 \tab | mean_71-00 - \tab |                   \cr
-                 \tab | mean_81-10 - \tab |                   \cr
-                 \tab |              \tab | air_temperature < \cr
-                 \tab |              \tab | cloudiness <      \cr
-                 \tab |              \tab | moisture <        \cr
-                 \tab |              \tab | pressure <        \cr
-                 \tab |              \tab | soil <            \cr
-                 \tab |              \tab | standard_format - \cr
-                 \tab |              \tab | visibility <      \cr
-                 \tab |              \tab | wind <            \cr
-}
 }
 \examples{
 # Give weather station name (must be existing in metaIndex):
@@ -179,8 +142,8 @@ head(  selectDWD(id="", res="daily", var="kl", per="recent")   )
 
 }
 \seealso{
-\code{\link{dataDWD}}, \code{\link{metaIndex}}, \url{../doc/mapDWD.html},
-         \code{vignette("mapDWD", package="rdwd")}
+\code{\link{dataDWD}}, \code{\link{metaIndex}},
+         \url{https://bookdown.org/brry/rdwd}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Oct 2016

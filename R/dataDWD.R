@@ -6,7 +6,9 @@
 #' 
 #' Get climate data from the German Weather Service (DWD) FTP-server.
 #' The desired .zip (or .txt) dataset is downloaded into \code{dir}.
-#' If \code{read=TRUE}, it is also read, processed and returned as a data.frame.
+#' If \code{read=TRUE}, it is also read, processed and returned as a data.frame.\cr
+#' To solve "errors in download.file: cannot open URL", see 
+#' \url{https://bookdown.org/brry/rdwd/station-selection.html#fileindex}.\cr
 #' 
 #' @return Presuming downloading and processing were successful:
 #'         if \code{read=TRUE}, a data.frame of the desired dataset
@@ -16,7 +18,8 @@
 #'         If length(file)>1, the output is a list of data.frames / vector of filenames.\cr
 #'         The output is always invisible.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jun-Oct 2016
-#' @seealso \code{\link{selectDWD}}. \code{\link{readDWD}}, \code{\link{download.file}}.
+#' @seealso \code{\link{selectDWD}}. \code{\link{readDWD}}, \code{\link{download.file}}.\cr
+#'          \url{https://bookdown.org/brry/rdwd}\cr
 #'          Helpful for plotting: \code{berryFunctions::\link[berryFunctions]{monthAxis}},
 #'          see also \code{berryFunctions::\link[berryFunctions]{climateGraph}}
 #' @keywords data file
@@ -58,8 +61,8 @@
 #' #links <- selectDWD(res="daily", var="solar")
 #' #sol <- dataDWD(links, sleep=20) # random waiting time after download (0 to 20 secs)
 #' 
-#' # Real life examples can be found in the use cases vignette:
-#' vignette("cases")
+#' # Real life examples can be found in the use cases section of the vignette:
+#' # browseURL("https://bookdown.org/brry/rdwd")
 #' }
 #' 
 #' @param file   Char (vector): complete file URL(s) (including base and filename.zip) as returned by
@@ -72,7 +75,9 @@
 #'               Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}
 #' @param force  Logical (vector): always download, even if the file already exists in \code{dir}?
 #'               Use NA to force re-downloading files older than 24 hours.
-#'               If FALSE, it is still read (or name returned). DEFAULT: FALSE
+#'               Use a numerical value to force after that amount of hours.
+#'               Note you might want to set \code{overwrite=TRUE} as well.
+#'               If FALSE, the file is still read (or name returned). DEFAULT: FALSE
 #' @param overwrite Logical (vector): if force=TRUE, overwrite the existing file
 #'               rather than append "_1"/"_2" etc to the filename? DEFAULT: FALSE
 #' @param sleep  Number. If not 0, a random number of seconds between 0 and
@@ -147,10 +152,14 @@ outfile <- gsub(paste0(base,"/"), "", file)
 outfile <- gsub("/", "_", outfile)
 
 # force=NA management
-force_old <- difftime(Sys.time(), file.mtime(outfile), units="h") > 24
+if(is.null(force)) stop("force cannot be NULL. Must be TRUE, FALSE, NA or a number.")
 force <- rep(force, length=length(outfile)) # recycle vector
-force[is.na(force) & force_old] <- TRUE # force if old
-force[is.na(force)] <- FALSE # otherwise don't
+fT <- sapply(force, isTRUE)
+fF <- sapply(force, isFALSE)
+if(any(fT)) force[fT] <- 0
+if(any(fF)) force[fF] <- Inf
+force[is.na(force)] <- 24
+force <- difftime(Sys.time(), file.mtime(outfile), units="h") > force
 
 dontdownload <- file.exists(outfile) & !force
 if( any(dontdownload) & !quiet )
@@ -191,7 +200,7 @@ if(any(iserror))
   msg <- paste0(msg, "download.file error",if(ne>1) "s",":\n")
   msg2 <- sapply(dl_results[iserror], function(e)attr(e,"condition")$message)
   if(any(substr(file[iserror], 1, 4) != "ftp:"))
-     msg2 <- paste0(msg2, "\ndataDWD needs urls starting with 'ftp://'.")
+     msg2 <- paste0(msg2, "\ndataDWD needs urls starting with 'ftp://'. You can use joinbf=TRUE for relative links.")
   msg <- paste0(msg, paste(msg2, collapse="\n"))
   warning(msg, call.=FALSE)
   }
