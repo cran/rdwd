@@ -20,9 +20,7 @@
 #' 
 #' @return Invisible data.frame of the desired dataset, 
 #'         or a named list of data.frames if length(file) > 1.\cr
-#'         \code{\link{readDWD.binary}}, 
-#'         \code{\link{readDWD.raster}} and \code{\link{readDWD.asc}} 
-#'         return raster objects instead of data.frames.
+#'         The functions for gridded data return raster objects instead of data.frames.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jul-Oct 2016, Winter 2018/19
 #' @seealso \code{\link{dataDWD}}, \code{\link{readVars}}, 
 #'          \code{\link{readMeta}}, \code{\link{selectDWD}}\cr
@@ -247,6 +245,7 @@ if(!is.null(format))
     {
     nch <- nchar(as.character(dat$MESS_DATUM[1]))
     if(is.na(format)) format <- if(nch== 8) "%Y%m%d" else 
+                                if(nch==12) "%Y%m%d%H%M" else # for 201804270020 10min data 
                                 if(nch==13) "%Y%m%d%H:%M" else"%Y%m%d%H"
     dat$MESS_DATUM <- as.POSIXct(as.character(dat$MESS_DATUM), format=format, tz=tz)
     }
@@ -544,7 +543,7 @@ stats
 #' SF_rad <- readDWD(SF_file, selection=1:10, exdir=SF_exdir) #with toraster=TRUE 
 #' if(length(SF_rad)!=2) stop("length(SF_rad) should be 2, but is ", length(SF_rad))
 #' 
-#' SF_radp <- projectRasterDWD(SF_rad$data)
+#' SF_radp <- projectRasterDWD(SF_rad$dat)
 #' raster::plot(SF_radp[[1]], main=SF_rad$meta$date[1])
 #' addBorders()
 #' 
@@ -557,7 +556,7 @@ stats
 #' RW_exdir <- "C:/Users/berry/Desktop/DWDbinaryRW"
 #' if(!file.exists(RW_exdir)) RW_exdir <- tempdir()
 #' RW_rad <- readDWD(RW_file, selection=1:10, exdir=RW_exdir)
-#' RW_radp <- projectRasterDWD(RW_rad$data, extent="rw")
+#' RW_radp <- projectRasterDWD(RW_rad$dat, extent="rw")
 #' raster::plot(RW_radp[[1]], main=RW_rad$meta$date[1])
 #' addBorders()
 #' 
@@ -576,7 +575,7 @@ stats
 #'                  \code{dwdradar::\link[dwdradar]{readRadarFile}}.
 #'                  DEFAULT exdir: sub(".tar.gz$", "", file)
 #' @param toraster  Logical: convert output (list of matrixes + meta informations)
-#'                  to a list with data (\code{raster \link[raster]{stack}}) + 
+#'                  to a list with dat (\code{raster \link[raster]{stack}}) + 
 #'                  meta (list from the first subfile, but with vector of dates)?
 #'                  DEFAULT: TRUE
 #' @param progbar   Show messages and progress bars? \code{\link{readDWD}} will
@@ -635,7 +634,7 @@ rbmat <- raster::stack(rbmat)
 rbmeta <- rb[[1]]$meta
 rbmeta$filename <- file
 rbmeta$date <- as.POSIXct(time)
-return(invisible(list(data=rbmat, meta=rbmeta)))
+return(invisible(list(dat=rbmat, meta=rbmeta)))
 }
 
 
@@ -725,9 +724,15 @@ return(invisible(r))
 #' file <- dataDWD(url, base=gridbase, joinbf=TRUE, dir=localtestdir(), read=FALSE)
 #' nc <- readDWD(file)
 #' ncp <- projectRasterDWD(nc, proj="nc", extent="nc")
-#' raster::plot(ncp[[1]], col=seqPal(), main=paste(nc@title, nc@z$"Date/time"[1]))
+#'  for(i in 1:3) raster::plot(ncp[[i]], col=seqPal(), 
+#'                             main=paste(nc@title, nc@z[[1]][i]))
 #' addBorders()
 #' str(nc, max.level=2)
+#' 
+#' raster::values(nc[[1]]) # obtain actual values into memory
+#'  
+#' raster::plot(nc[[1]]) # axes 0:938 / 0:720, the number of grid cells
+#' raster::plot(ncp[[1]])# properly projected, per default onto latlon
 #' 
 #' rng <- range(raster::cellStats(nc[[1:6]], "range"))
 #' raster::plot(nc, col=seqPal(), zlim=rng, maxnl=6)
@@ -898,7 +903,7 @@ return(invisible(rf))
 #' radbase <- paste0(gridbase,"/hourly/radolan/historical/asc/")
 #' radfile <- "2018/RW-201809.tar" # 25 MB to download
 #' file <- dataDWD(radfile, base=radbase, joinbf=TRUE, dir=datadir,
-#'                 dfargs=list(mode="wb"), read=FALSE) # download with mode=wb!!!
+#'                 dbin=TRUE, read=FALSE) # download with mode=wb!!!
 #'                 
 #' #asc <- readDWD(file) # 4 GB in mem. ~ 20 secs unzip, 30 secs read, 10 min divide
 #' asc <- readDWD(file, selection=1:5, dividebyten=TRUE)

@@ -4,8 +4,14 @@
 \alias{readDWD.asc}
 \title{read dwd gridded radolan asc data}
 \usage{
-readDWD.asc(file, exdir = NULL, dividebyten = TRUE, selection = NULL,
-  progbar = TRUE, ...)
+readDWD.asc(
+  file,
+  exdir = NULL,
+  dividebyten = TRUE,
+  selection = NULL,
+  progbar = TRUE,
+  ...
+)
 }
 \arguments{
 \item{file}{Name of file on harddrive, like e.g. 
@@ -51,7 +57,7 @@ datadir <- localtestdir()
 radbase <- paste0(gridbase,"/hourly/radolan/historical/asc/")
 radfile <- "2018/RW-201809.tar" # 25 MB to download
 file <- dataDWD(radfile, base=radbase, joinbf=TRUE, dir=datadir,
-                dfargs=list(mode="wb"), read=FALSE) # download with mode=wb!!!
+                dbin=TRUE, read=FALSE) # download with mode=wb!!!
                 
 #asc <- readDWD(file) # 4 GB in mem. ~ 20 secs unzip, 30 secs read, 10 min divide
 asc <- readDWD(file, selection=1:5, dividebyten=TRUE)

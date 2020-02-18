@@ -69,6 +69,14 @@ testthat::expect_equivalent(clim, clim_vn)
 testthat::expect_equal(clim_vn, clim_vnf)
 })
 
+testthat::test_that("readDWD.data works for 10 minute data", {
+link <- selectDWD("Kiel-Holtenau", res="10_minutes", var="air_temperature", per="recent") 
+file <- dataDWD(link, read=FALSE, dir=dir_data)
+air_temperature <- readDWD(file, varnames=TRUE)
+time_diff <- as.numeric(diff(air_temperature$MESS_DATUM[1:10]))
+testthat::expect_equal(time_diff, rep(10,9))
+})
+
 
 # readRadarFile ----
 
@@ -90,7 +98,6 @@ trr <- function(file, ext="radolan", readdwd=FALSE) # trr: test reading radar da
   raster::plot(rrp, main="\nProjected")
   addBorders()
   title(main=main, outer=TRUE, line=-1.1)
-  # raster::plot(projectRasterDWD(rrr, latlon=FALSE), main="Projected without latlon")
   rngr <- range(raster::cellStats(rrr, "range"))
   rngp <- range(raster::cellStats(rrp, "range"))
   return(list(file=file2, rrp=rrp, meta=rrf$meta, range_orig=rngr, range_proj=rngp))
@@ -103,7 +110,7 @@ rw <- trr("raa01-rw_10000-1907010950-dwd---bin_weatherRadolan")
 sf <- trr("raa01-sf_10000-1605010450-dwd---bin_dailyRadHist")
 rx <- trr("raa01-rx_10000-1605290600-dwd---bin_Braunsbach")
 rx1 <- raster::raster(dwdradar::readRadarFile(rx$file)$dat)
-rx2 <- projectRasterDWD(rx1, latlon=FALSE)
+rx2 <- projectRasterDWD(rx1, targetproj=NULL)
 raster::plot(rx2, main="\nProjected without latlon")
 raster::plot(rx$rrp, zlim=rx$range_orig, main="\nProjected, with custom zlim")
 addBorders()
@@ -149,6 +156,20 @@ testthat::expect_warning(findID("01050"),
                "findID: no ID could be determined from name '01050'.")
 testthat::expect_equal(findID(), "")
 })
+
+
+
+# indexFTP----
+
+testthat::test_that("indexFTP warns and works as intended", {
+base <- "https://opendata.dwd.de/weather/radar/radolan/rw/"
+testthat::expect_warning(indexFTP(base, folder="", dir=tempdir(), quiet=TRUE),
+                         "base should start with ftp://")
+base <- "ftp://ftp-cdc.dwd.de/weather/radar/radolan/rw"
+rw <- indexFTP(base, folder="", dir=tempdir(), quiet=TRUE, exclude.latest.bin=FALSE)
+testthat::expect_equal(tail(rw,1), "/raa01-rw_10000-latest-dwd---bin")
+})
+
 
 
 # selectDWD ----

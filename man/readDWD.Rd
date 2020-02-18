@@ -4,13 +4,26 @@
 \alias{readDWD}
 \title{Process data from the DWD CDC FTP Server}
 \usage{
-readDWD(file, quiet = FALSE, progbar = !quiet, fread = FALSE,
-  varnames = FALSE, var = "", format = NA, tz = "GMT",
-  dividebyten = TRUE, multia = grepl("Standort.txt$", file),
-  meta = grepl(".txt$", file), stand = grepl("standard_format", file),
-  binary = grepl(".tar.gz$", file), raster = grepl(".asc.gz$", file),
-  nc = grepl(".nc.gz$", file), radar = grepl(".gz$", file),
-  asc = grepl(".tar$", file), ...)
+readDWD(
+  file,
+  quiet = FALSE,
+  progbar = !quiet,
+  fread = FALSE,
+  varnames = FALSE,
+  var = "",
+  format = NA,
+  tz = "GMT",
+  dividebyten = TRUE,
+  multia = grepl("Standort.txt$", file),
+  meta = grepl(".txt$", file),
+  stand = grepl("standard_format", file),
+  binary = grepl(".tar.gz$", file),
+  raster = grepl(".asc.gz$", file),
+  nc = grepl(".nc.gz$", file),
+  radar = grepl(".gz$", file),
+  asc = grepl(".tar$", file),
+  ...
+)
 }
 \arguments{
 \item{file}{Char (vector): name(s) of the file(s) downloaded with 
@@ -80,9 +93,7 @@ documented in each internal function.}
 \value{
 Invisible data.frame of the desired dataset, 
         or a named list of data.frames if length(file) > 1.\cr
-        \code{\link{readDWD.binary}}, 
-        \code{\link{readDWD.raster}} and \code{\link{readDWD.asc}} 
-        return raster objects instead of data.frames.
+        The functions for gridded data return raster objects instead of data.frames.
 }
 \description{
 Read climate data that was downloaded with \code{\link{dataDWD}}.

@@ -4,8 +4,7 @@
 \alias{readDWD.nc}
 \title{read dwd netcdf data}
 \usage{
-readDWD.nc(file, gargs = NULL, var = "", toraster = TRUE,
-  quiet = FALSE, ...)
+readDWD.nc(file, gargs = NULL, var = "", toraster = TRUE, quiet = FALSE, ...)
 }
 \arguments{
 \item{file}{Name of file on harddrive, like e.g. 
@@ -49,9 +48,15 @@ url <- "daily/Project_TRY/humidity/RH_199509_daymean.nc.gz"    # 25 MB
 file <- dataDWD(url, base=gridbase, joinbf=TRUE, dir=localtestdir(), read=FALSE)
 nc <- readDWD(file)
 ncp <- projectRasterDWD(nc, proj="nc", extent="nc")
-raster::plot(ncp[[1]], col=seqPal(), main=paste(nc@title, nc@z$"Date/time"[1]))
+ for(i in 1:3) raster::plot(ncp[[i]], col=seqPal(), 
+                            main=paste(nc@title, nc@z[[1]][i]))
 addBorders()
 str(nc, max.level=2)
+
+raster::values(nc[[1]]) # obtain actual values into memory
+ 
+raster::plot(nc[[1]]) # axes 0:938 / 0:720, the number of grid cells
+raster::plot(ncp[[1]])# properly projected, per default onto latlon
 
 rng <- range(raster::cellStats(nc[[1:6]], "range"))
 raster::plot(nc, col=seqPal(), zlim=rng, maxnl=6)
