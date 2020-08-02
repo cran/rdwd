@@ -2,9 +2,9 @@
 #' 
 #' Select DWD stations within a given radius around a set of coordinates
 #' 
-#' @return \code{\link{metaIndex}} subset with additional columns "dist" and "url"
+#' @return [`metaIndex`] subset with additional columns "dist" and "url"
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Mar 2017
-#' @seealso \code{\link{selectDWD}}, \code{\link{metaIndex}}
+#' @seealso [selectDWD()], [`metaIndex`]
 #' @export
 #' @importFrom berryFunctions sortDF
 #' @examples
@@ -13,24 +13,24 @@
 #'     res=c("daily","hourly"), var= c("precipitation","more_precip","kl") ,
 #'     mindate=as.Date("2016-05-30"), statname="Braunsbach catchment center")
 #' # View(m)
-#'     
+#' 
 #' # for a continued example of this, see the vignette in chapter
 #' # use case: plot all rainfall values around a given point
 #' # browseURL("https://bookdown.org/brry/rdwd")
 #' 
-#' @param lat         Coordinates y component [degrees N/S, range 47:55]
-#' @param lon         Coordinates x component [degrees E/W, range 6:15]
-#' @param radius      Maximum distance [km] within which stations will be selected
+#' @param lat         Coordinates y component \[degrees N/S, range 47:55]
+#' @param lon         Coordinates x component \[degrees E/W, range 6:15]
+#' @param radius      Maximum distance \[km] within which stations will be selected
 #' @param res,var,per Restrictions for dataset type as documented in
-#'                    \code{\link{selectDWD}}. Each can be a vector of entries.
+#'                    [selectDWD()]. Each can be a vector of entries.
 #'                    DEFAULTS: NA (ignored)
 #' @param mindate     Minimum dataset ending date (as per metadata). DEFAULT: NA
 #' @param hasfileonly Logical: only return entries for which there is an
 #'                    open-access file available? DEFAULT: TRUE
 #' @param statname    Character: name for target location. DEFAULT:
 #'                    "nearbyStations target location"
-#' @param quiet       Logical: suppress progress messages? DEFAULT: FALSE
-#' @param \dots       Further arguments passed to \code{\link{selectDWD}}
+#' @param quiet       Logical: suppress progress messages? DEFAULT: FALSE through [rdwdquiet()]
+#' @param \dots       Further arguments passed to [selectDWD()]
 #' 
 nearbyStations <- function(
 lat,
@@ -42,7 +42,7 @@ per=NA,
 mindate=NA,
 hasfileonly=TRUE,
 statname="nearbyStations target location",
-quiet=FALSE,
+quiet=rdwdquiet(),
 ...
 )
 {

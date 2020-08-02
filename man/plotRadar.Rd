@@ -7,63 +7,89 @@
 plotRadar(
   x,
   layer = NULL,
-  main = "",
+  main = x@title,
   land = "gray80",
   sea = "cadetblue1",
   de = "grey80",
   eu = "black",
+  col = berryFunctions::seqPal(),
   xlim = NULL,
   ylim = NULL,
+  zlim = NULL,
+  axes = TRUE,
+  las = 1,
+  mar = c(2.5, 3.5, 2.5, 5),
+  keeppar = TRUE,
   project = TRUE,
   proj = "radolan",
   extent = "radolan",
   targetproj = "ll",
-  quiet = FALSE,
+  quiet = rdwdquiet(),
   ...
 )
 }
 \arguments{
-\item{x}{raster oject, e.g. 'dat' element of object returned by \code{\link{readDWD}}.}
+\item{x}{raster oject, e.g. 'dat' element of object returned by \code{\link[=readDWD]{readDWD()}}.}
 
 \item{layer}{Optional: selected layer(s) to be plotted. DEFAULT: NULL}
 
-\item{main}{Graph title(s). DEFAULT: ""}
+\item{main}{Graph title(s). Use "" to suppress.
+Note\code{output@title} is set to \code{main}! DEFAULT: x@title}
 
 \item{land}{Color of land areas in the map. DEFAULT: "gray80"}
 
 \item{sea}{Color of sea areas in the map. DEFAULT: "cadetblue1"}
 
-\item{de}{Color of Deutschland Bundesland borders. DEFAULT: "grey80"}
+\item{de}{Color of Deutschland Bundesland borders (\code{\link{DEU}}). DEFAULT: "grey80"}
 
-\item{eu}{Color of Europe country borders. DEFAULT: "black"}
+\item{eu}{Color of Europe country borders (\code{\link{EUR}}). DEFAULT: "black"}
+
+\item{col}{Color palette for the data itself.
+DEFAULT: \code{\link[berryFunctions:seqPal]{berryFunctions::seqPal()}}}
 
 \item{xlim}{xlim. DEFAULT: NULL, i.e. taken from x extent (after reprojection if \code{project=TRUE})}
 
 \item{ylim}{ylim. DEFAULT: NULL, i.e. taken from y extent (after reprojection if \code{project=TRUE})}
 
-\item{project}{Project the data before plotting? Not needed if 
-\code{\link{projectRasterDWD}} has already been called. DEFAULT: TRUE}
+\item{zlim}{zlim. 3 Options: two-number vector,
+\code{zlim="ind"} for individual zlim per layer,
+or NULL for \code{range} of selected layer(s).
+DEFAULT: NULL}
 
-\item{proj}{current projection, see \code{\link{projectRasterDWD}}, 
+\item{axes}{Draw axes? DEFAULT: TRUE}
+
+\item{las}{LabelAxisStyle for axes. DEFAULT: 1 (all upright)}
+
+\item{mar}{Vector with plot margins. DEFAULT: c(2.5, 3.5, 2.5, 5)}
+
+\item{keeppar}{Logical: keep the margins set with par, so later points etc are
+added in the right location?
+DEFAULT: TRUE, opposite to \code{sf::plot} with reset=TRUE, see
+\url{https://github.com/cran/sf/blob/master/R/plot.R}}
+
+\item{project}{Project the data before plotting? Not needed if
+\code{\link[=projectRasterDWD]{projectRasterDWD()}} has already been called. DEFAULT: TRUE}
+
+\item{proj}{current projection, see \code{\link[=projectRasterDWD]{projectRasterDWD()}},
 used only if \code{project=TRUE}. DEFAULT: "radolan"}
 
-\item{extent}{current extent, see \code{\link{projectRasterDWD}}, 
+\item{extent}{current extent, see \code{\link[=projectRasterDWD]{projectRasterDWD()}},
 used only if \code{project=TRUE}. DEFAULT: "radolan"}
 
-\item{targetproj}{target projection, see \code{\link{projectRasterDWD}}, 
+\item{targetproj}{target projection, see \code{\link[=projectRasterDWD]{projectRasterDWD()}},
 used only if \code{project=TRUE}. DEFAULT: "ll"}
 
-\item{quiet}{suppress progress messages? DEFAULT: FALSE}
+\item{quiet}{suppress progress messages? DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
 
-\item{\dots}{Further arguments passed to \code{raster::\link[raster]{plot}}}
+\item{\dots}{Further arguments passed to \code{\link[raster:plot]{raster::plot()}}}
 }
 \value{
 raster object, projected (if \code{project=TRUE}).
 If \code{length(layer)==1}, only that selected layer is returned.
-If \code{main} is non-empty, it is added to \code{x@title}.
+\code{output@title} is set to \code{main}.
 }
 \description{
-Convenience function to plot radar products on a pretty map. 
+Convenience function to plot radar products on a pretty map.
 Creates a separate plot for each layer, a selection is possible.
 }
 \examples{
@@ -71,14 +97,32 @@ Creates a separate plot for each layer, a selection is possible.
 \dontrun{ ## Excluded from CRAN checks: requires internet connection
 link <- "seasonal/air_temperature_mean/16_DJF/grids_germany_seasonal_air_temp_mean_188216.asc.gz"
 rad <- dataDWD(link, base=gridbase, joinbf=TRUE, dir=tempdir())
-plotRadar(rad, proj="seasonal", extent=rad@extent)
-plotRadar(rad, ylim=c(52,54), proj="seasonal", extent=rad@extent)
-plotRadar(rad)
+radp <- plotRadar(rad, proj="seasonal", extent=rad@extent, main="plotRadar ex")
+plotRadar(radp, ylim=c(52,54), project=FALSE) # reuses main
+
+# plotRadar equivalent, map only country borders:
+radpm <- projectRasterDWD(rad[[1]], proj="seasonal", extent=rad@extent)
+raster::plot(radpm)
+addBorders()
+
+# several layers
+url <- "daily/Project_TRY/pressure/PRED_199606_daymean.nc.gz"  #  5 MB
+nc <- dataDWD(url, base=gridbase, joinbf=TRUE, dir=localtestdir())
+
+ncp3 <- plotRadar(nc, main=paste(nc@title, nc@z[[1]]), layer=1:3,
+                  col=terrain.colors(100), proj="nc", extent="nc")
+plotRadar(ncp3, layer=3:4, project=FALSE) # still has all layers
+plotRadar(ncp3, layer=4:5, project=FALSE, zlim="ind") # individual zlims per layer
+plotRadar(ncp3, layer=1, project=FALSE, zlim=c(1016,1020))
+
+ncp1 <- plotRadar(nc, layer=1, proj="nc", extent="nc") # much faster projection
+# no longer has layers 2-4:
+berryFunctions::is.error(plotRadar(ncp1, layer=1:4, project=FALSE), TRUE, TRUE)
 }
 
 }
 \seealso{
-\code{\link{readDWD}}, \url{https://bookdown.org/brry/rdwd/raster-data.html}
+\code{\link[=addBorders]{addBorders()}}, \code{\link[=readDWD]{readDWD()}}, \url{https://bookdown.org/brry/rdwd/raster-data.html}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Feb 2020

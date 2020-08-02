@@ -2,7 +2,7 @@
 #' 
 #' @return invisible data.frame. Also \code{\link{print}s} the output nicely formatted.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Nov 2016
-#' @seealso \code{\link{metaIndex}}
+#' @seealso [`metaIndex`]
 #' @keywords datasets
 #' @importFrom berryFunctions sortDF
 #' @export
@@ -32,8 +32,6 @@ if(any(nonpub)&hasfileonly) nonpubmes <- paste0("\nAdditionally, there are ",
 if(hasfileonly) sel <- sel & metaIndex$hasfile
 # Output preparation:
 out <- metaIndex[sel,]
-out$von_datum <- as.Date(as.character(out$von_datum), "%Y%m%d")
-out$bis_datum <- as.Date(as.character(out$bis_datum), "%Y%m%d")
 #
 # Print preparation I:
 p_id <- toString(unique(out$Stations_id))

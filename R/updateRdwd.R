@@ -1,29 +1,29 @@
 #' @title Update rdwd development version
 #' @description Update rdwd to the latest development version on github, if necessary.
-#'         If the version number or date is larger on github, 
-#'         \code{remotes::\link[remotes]{install_github}} will be called.
+#'         If the version number or date is larger on github,
+#'         [remotes::install_github()] will be called.
 #' @return data.frame with version information
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Nov 2019
-#' @seealso \code{\link{help}}, \code{remotes::\link[remotes]{install_github}}
+#' @seealso [help()], [remotes::install_github()]
 #' @keywords file
-#' @importFrom utils packageDescription
+#' @importFrom utils packageDescription download.file
 #' @export
 #' @examples
 #' # updateRdwd()
-#'
+#' 
 #' @param pack     Name of (already installed) package. DEFAULT: "rdwd"
 #' @param user     Github username. repo will then be user/pack. DEFAULT: "brry"
-#' @param vignette build_vignettes in \code{remotes::\link[remotes]{install_github}}? 
+#' @param vignette build_vignettes in [remotes::install_github()]?
 #'                 DEFAULT: TRUE
-#' @param quiet    Suppress version messages and \code{remotes::install} output?
-#'                 DEFAULT: FALSE
-#' @param \dots    Further arguments passed to \code{remotes::\link[remotes]{install_github}}
-#'
+#' @param quiet    Suppress version messages and `remotes::install` output?
+#'                 DEFAULT: FALSE through [rdwdquiet()]
+#' @param \dots    Further arguments passed to [remotes::install_github()]
+#' 
 updateRdwd <- function(
 pack="rdwd",
 user="brry",
 vignette=TRUE,
-quiet=FALSE,
+quiet=rdwdquiet(),
 ...
 )
 {
@@ -36,7 +36,7 @@ tf <- tempfile("DESCRIPTION")
 download.file(url, tf, quiet=TRUE)
 Vsrc <- read.dcf(file=tf, fields=c("Date","Version"))
 Vsrc <- split(unname(Vsrc),colnames(Vsrc)) # transform matrix to list
-output <- data.frame(Version=c(Vinst$Version, Vsrc$Version), 
+output <- data.frame(Version=c(Vinst$Version, Vsrc$Version),
                         Date=c(Vinst$Date,    Vsrc$Date))
 rownames(output) <- paste0(pack,"_",c("Locally_installed", "Github_latest"))
 # install if outdated:
@@ -48,10 +48,13 @@ if(!quiet) message(pack, " is up to date, compared to github.com/",repo,
 return(invisible(output))
 }
 if(!quiet) message(pack, " local version ", Vinst$Version, " (", Vinst$Date,
-        ") is outdated.\nInstalling development version ", 
+        ") is outdated.\nInstalling development version ",
         Vsrc$Version, " (", Vsrc$Date,") from github.com/",repo)
 checkSuggestedPackage("remotes", "updateRdwd")
-# actually install, with vignettes (unlinke remotes default)
+if(!quiet) message("First unloading ",pack," so it can be installed by remotes::install_github.")
+try(detach(paste0("package:",pack), character.only=TRUE, unload=TRUE), silent=TRUE)
+# actually install, with vignettes (unlike remotes default)
 remotes::install_github(repo=repo, build_vignettes=vignette, quiet=quiet, ...)
+if(!quiet) message("Please re-load ",pack," now.  library(",pack,")  should do.")
 return(invisible(output))
 }

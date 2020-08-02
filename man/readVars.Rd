@@ -4,24 +4,26 @@
 \alias{readVars}
 \title{Process data from the DWD CDC FTP Server}
 \usage{
-readVars(file, progbar = TRUE)
+readVars(file, params = dwdparams, progbar = TRUE)
 }
 \arguments{
-\item{file}{Char (vector): name(s) of the file(s) downloaded with \code{\link{dataDWD}},
+\item{file}{Char (vector): name(s) of the file(s) downloaded with \code{\link[=dataDWD]{dataDWD()}},
 e.g. "~/DWDdata/tageswerte_KL_02575_akt.zip"}
+
+\item{params}{data.frame: Parameter explanations. DEFAULT: \code{\link{dwdparams}}}
 
 \item{progbar}{Logical: present a progress bar with estimated remaining time?
 If missing and length(file)==1, progbar is internally set to FALSE.
 DEFAULT: TRUE}
 }
 \value{
-data.frame of the desired dataset, 
-        or a named list of data.frames if length(file) > 1.
+data.frame of the desired dataset,
+or a named list of data.frames if length(file) > 1.
 }
 \description{
-Read climate variables (column meta data) from zip folders downloaded with 
-\code{\link{dataDWD}}.
-The metadata file \code{"Metadaten_Parameter.*txt"} in the zip folder \code{file} 
+Read climate variables (column meta data) from zip folders downloaded with
+\code{\link[=dataDWD]{dataDWD()}}.
+The metadata file \code{"Metadaten_Parameter.*txt"} in the zip folder \code{file}
 is read, processed and returned as a data.frame.\cr
 \code{file} can be a vector with several filenames.
 }
@@ -30,7 +32,7 @@ is read, processed and returned as a data.frame.\cr
 
 }
 \seealso{
-\code{\link{dataDWD}}, \code{\link{readDWD}}, \code{\link{dwdparams}}
+\code{\link[=dataDWD]{dataDWD()}}, \code{\link[=readDWD]{readDWD()}}, \code{\link{dwdparams}}, \code{\link[=newColumnNames]{newColumnNames()}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Jun 2018

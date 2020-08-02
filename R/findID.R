@@ -4,7 +4,7 @@
 #' 
 #' @return Character string (vector) with ID(s)
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct-Nov 2016
-#' @seealso used in \code{\link{selectDWD}}, \code{\link{metaInfo}}
+#' @seealso used in [selectDWD()], [metaInfo()]
 #' @keywords character
 #' @export
 #' @importFrom berryFunctions traceCall
@@ -23,23 +23,23 @@
 #' findID("Muenchen", FALSE)
 #' berryFunctions::convertUmlaut("M?nchen") # use this to convert umlauts in lists
 #' 
-#' @param name  Char: station name(s) that will be matched in \code{mindex} to obtain
-#'              \bold{id}. DEFAULT: ""
-#' @param exactmatch Logical: Should \code{name} match an entry in \code{mindex}
-#'              exactly (be \code{\link{==}})?
-#'              If FALSE, \code{name} may be a part of \code{mindex$Stationsname},
-#'              as checked with \code{\link{grepl}}. This is useful e.g. to get
+#' @param name  Char: station name(s) that will be matched in `mindex` to obtain
+#'              **id**. DEFAULT: ""
+#' @param exactmatch Logical: Should `name` match an entry in `mindex`
+#'              exactly (be [`==`])?
+#'              If FALSE, `name` may be a part of `mindex$Stationsname`,
+#'              as checked with [grepl()]. This is useful e.g. to get
 #'              all stations starting with a name (e.g. 42 IDs for Berlin).
 #'              DEFAULT: TRUE
-#' @param mindex Single object: Index used to select \code{id} if \code{name}
-#'              is given. DEFAULT: \code{rdwd:::\link{metaIndex}}
-#' @param quiet Logical: suppress length warnings? DEFAULT: FALSE
-#'  
+#' @param mindex Single object: Index used to select `id` if `name`
+#'              is given. DEFAULT: [`metaIndex`]
+#' @param quiet Logical: suppress length warnings? DEFAULT: FALSE through [rdwdquiet()]
+#' 
 findID <- function(
 name="",
 exactmatch=TRUE,
 mindex=metaIndex,
-quiet=FALSE
+quiet=rdwdquiet()
 )
 {
 # Input checks and processing:

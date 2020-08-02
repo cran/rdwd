@@ -8,35 +8,39 @@ readDWD.binary(
   file,
   exdir = sub(".tar.gz$", "", file),
   toraster = TRUE,
-  progbar = TRUE,
+  quiet = rdwdquiet(),
+  progbar = !quiet,
   selection = NULL,
   ...
 )
 }
 \arguments{
-\item{file}{Name of file on harddrive, like e.g. 
+\item{file}{Name of file on harddrive, like e.g.
 DWDdata/daily_radolan_historical_bin_2017_SF201712.tar.gz}
 
 \item{exdir}{Directory to unzip into. If existing, only the needed files
-will be unpacked with \code{\link{untar}}. Note that exdir
-size will be around 1.1 GB. exdir can contain other files, 
-these will be ignored for the actual reading with 
-\code{dwdradar::\link[dwdradar]{readRadarFile}}.
+will be unpacked with \code{\link[=untar]{untar()}}. Note that exdir
+size will be around 1.1 GB. exdir can contain other files,
+these will be ignored for the actual reading with
+\code{\link[dwdradar:readRadarFile]{dwdradar::readRadarFile()}}.
 DEFAULT exdir: sub(".tar.gz$", "", file)}
 
 \item{toraster}{Logical: convert output (list of matrixes + meta informations)
-to a list with dat (\code{raster \link[raster]{stack}}) + 
+to a list with dat (\code{\link[raster:stack]{raster::stack}}) +
 meta (list from the first subfile, but with vector of dates)?
 DEFAULT: TRUE}
 
-\item{progbar}{Show messages and progress bars? \code{\link{readDWD}} will
+\item{quiet}{Suppress progress messages?
+DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
+
+\item{progbar}{Show progress bars? \code{\link[=readDWD]{readDWD()}} will
 keep progbar=TRUE for binary files, even if length(file)==1.
-DEFAULT: TRUE}
+DEFAULT: !quiet, i.e. TRUE}
 
 \item{selection}{Optionally read only a subset of the ~24*31=744 files.
 Called as \code{f[selection]}. DEFAULT: NULL (ignored)}
 
-\item{\dots}{Further arguments passed to \code{dwdradar::\link[dwdradar]{readRadarFile}}, 
+\item{\dots}{Further arguments passed to \code{\link[dwdradar:readRadarFile]{dwdradar::readRadarFile()}},
 i.e. \code{na} and \code{clutter}}
 }
 \value{
@@ -44,7 +48,7 @@ list depending on argument \code{toraster}, see there for details
 }
 \description{
 read gridded radolan binary data.
-Intended to be called via \code{\link{readDWD}}.\cr
+Intended to be called via \code{\link[=readDWD]{readDWD()}}.\cr
 }
 \examples{
 \dontrun{ # Excluded from CRAN checks, but run in localtests
@@ -52,31 +56,27 @@ Intended to be called via \code{\link{readDWD}}.\cr
 # SF file as example: ----
 
 SF_link <- "/daily/radolan/historical/bin/2017/SF201712.tar.gz"
-SF_file <- dataDWD(file=SF_link, base=gridbase, joinbf=TRUE,   # 204 MB
+SF_file <- dataDWD(url=SF_link, base=gridbase, joinbf=TRUE,   # 204 MB
                      dir=localtestdir(), read=FALSE)
 # exdir radardir set to speed up my tests:
 SF_exdir <- "C:/Users/berry/Desktop/DWDbinarySF"
 if(!file.exists(SF_exdir)) SF_exdir <- tempdir()
 # no need to read all 24*31=744 files, so setting selection:
-SF_rad <- readDWD(SF_file, selection=1:10, exdir=SF_exdir) #with toraster=TRUE 
+SF_rad <- readDWD(SF_file, selection=1:10, exdir=SF_exdir) #with toraster=TRUE
 if(length(SF_rad)!=2) stop("length(SF_rad) should be 2, but is ", length(SF_rad))
 
-SF_radp <- projectRasterDWD(SF_rad$dat)
-raster::plot(SF_radp[[1]], main=SF_rad$meta$date[1])
-addBorders()
-
+SF_radp <- plotRadar(SF_rad$dat, layer=1:3, main=SF_rad$meta$date)
+plotRadar(SF_radp, layer=1, project=FALSE)
 
 # RW file as example: ----
 
 RW_link <- "hourly/radolan/reproc/2017_002/bin/2017/RW2017.002_201712.tar.gz"
-RW_file <- dataDWD(file=RW_link, base=gridbase, joinbf=TRUE,   # 25 MB
+RW_file <- dataDWD(url=RW_link, base=gridbase, joinbf=TRUE,   # 25 MB
                   dir=localtestdir(), read=FALSE)
 RW_exdir <- "C:/Users/berry/Desktop/DWDbinaryRW"
 if(!file.exists(RW_exdir)) RW_exdir <- tempdir()
 RW_rad <- readDWD(RW_file, selection=1:10, exdir=RW_exdir)
-RW_radp <- projectRasterDWD(RW_rad$dat, extent="rw")
-raster::plot(RW_radp[[1]], main=RW_rad$meta$date[1])
-addBorders()
+RW_radp <- plotRadar(RW_rad$dat[[1]], main=RW_rad$meta$date[1], extent="rw")
 
 # ToDo: why are values + patterns not the same?
 
@@ -86,13 +86,13 @@ head(grep("historical", gridIndex, value=TRUE))
 }
 }
 \seealso{
-\code{\link{readDWD}}, especially \code{\link{readDWD.radar}}\cr
-  \url{https://wradlib.org} for much more extensive radar analysis in Python\cr
-  Kompositformatbeschreibung at \url{https://www.dwd.de/DE/leistungen/radolan/radolan.html}
-  for format description
+\code{\link[=readDWD]{readDWD()}}, especially \code{\link[=readDWD.radar]{readDWD.radar()}}\cr
+\url{https://wradlib.org} for much more extensive radar analysis in Python\cr
+Kompositformatbeschreibung at \url{https://www.dwd.de/DE/leistungen/radolan/radolan.html}
+for format description
 }
 \author{
-Berry Boessenkool, \email{berry-b@gmx.de}, Dec 2018. 
-        Significant input for the underlying \code{dwdradar::\link[dwdradar]{readRadarFile}} came
-        from Henning Rust & Christoph Ritschel at FU Berlin.
+Berry Boessenkool, \email{berry-b@gmx.de}, Dec 2018.
+Significant input for the underlying \code{\link[dwdradar:readRadarFile]{dwdradar::readRadarFile()}} came
+from Henning Rust & Christoph Ritschel at FU Berlin.
 }

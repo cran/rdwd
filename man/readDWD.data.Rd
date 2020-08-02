@@ -10,50 +10,50 @@ readDWD.data(
   varnames = FALSE,
   format = NA,
   tz = "GMT",
-  quiet = FALSE,
+  quiet = rdwdquiet(),
   ...
 )
 }
 \arguments{
-\item{file}{Name of file on harddrive, like e.g. 
+\item{file}{Name of file on harddrive, like e.g.
 DWDdata/daily_kl_recent_tageswerte_KL_03987_akt.zip}
 
-\item{fread}{Logical: read faster with \code{data.table::\link[data.table]{fread}}?
+\item{fread}{Logical: read faster with \link[data.table:fread]{data.table::fread}?
 When reading many large historical files, speedup is significant.
-NA can also be used, which means TRUE if data.table is available.
+When called from \code{\link[=readDWD]{readDWD()}}, NA can also be used, which means
+TRUE if data.table is available.
 DEFAULT: FALSE}
 
-\item{varnames}{Logical (vector): add a short description to the DWD variable 
+\item{varnames}{Logical (vector): add a short description to the DWD variable
 abbreviations in the column names?
-E.g. change \code{FX,TNK} to \code{FX.Windspitze,TNK.Lufttemperatur_Min},
-see \code{\link{newColumnNames}}.
+E.g. change \verb{FX,TNK} to \verb{FX.Windspitze,TNK.Lufttemperatur_Min},
+see \code{\link[=newColumnNames]{newColumnNames()}}.
 DEFAULT: FALSE (for backwards compatibility)}
 
-\item{format}{Char (vector): Format passed to
-\code{\link{as.POSIXct}} (see \code{\link{strptime}})
+\item{format}{Char (vector): Format passed to \code{\link[=as.POSIXct]{as.POSIXct()}} (see \code{\link[=strptime]{strptime()}})
 to convert the date/time column to POSIX time format.\cr
 If NULL, no conversion is performed (date stays a factor).
 If NA, \code{readDWD} tries to find a suitable format based
 on the number of characters. DEFAULT: NA}
 
-\item{tz}{Char (vector): time zone for \code{\link{as.POSIXct}}.
+\item{tz}{Char (vector): time zone for \code{\link[=as.POSIXct]{as.POSIXct()}}.
 "" is the current time zone, and "GMT" is UTC (Universal Time,
 Coordinated). DEFAULT: "GMT"}
 
-\item{quiet}{Suppress empty file warnings? DEFAULT: FALSE}
+\item{quiet}{Suppress empty file warnings and subfuntion name message?
+DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
 
-\item{\dots}{Further arguments passed to \code{\link{read.table}} or 
-\code{data.table::\link[data.table]{fread}}}
+\item{\dots}{Further arguments passed to \code{\link[=read.table]{read.table()}} or \code{\link[data.table:fread]{data.table::fread()}}}
 }
 \value{
 data.frame
 }
 \description{
-Read regular dwd data. 
-Intended to be called via \code{\link{readDWD}}.
+Read regular dwd data.
+Intended to be called via \code{\link[=readDWD]{readDWD()}}.
 }
 \seealso{
-\code{\link{readDWD}}, Examples in \code{\link{dataDWD}}
+\code{\link[=readDWD]{readDWD()}}, Examples in \code{\link[=dataDWD]{dataDWD()}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}

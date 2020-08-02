@@ -19,7 +19,7 @@ maxlldist(lat, long, data, r = 6371, fun = max, each = TRUE, ...)
 \item{i}{Integer: Index element against which all coordinate pairs
 are computed. DEFAULT: 1}
 
-\item{fun}{Function to be applied. DEFAULT: \code{\link{max}}}
+\item{fun}{Function to be applied. DEFAULT: \code{\link[=max]{max()}}}
 
 \item{each}{Logical: give max dist to all other points for each point separately?
 If FALSE, will return the maximum of the complete distance matrix,
@@ -41,6 +41,6 @@ Does not check coordinates. Not exported.
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Aug 2016 + Jan 2017.
-        Angle formula from Diercke Weltatlas 1996, Page 245
+Angle formula from Diercke Weltatlas 1996, Page 245
 }
 \keyword{spatial}

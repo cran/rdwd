@@ -9,32 +9,34 @@ readDWD.stand(
   fast = TRUE,
   fileEncoding = "latin1",
   formIndex = formatIndex,
+  quiet = rdwdquiet(),
   ...
 )
 }
 \arguments{
-\item{file}{Name of file on harddrive, like e.g. 
+\item{file}{Name of file on harddrive, like e.g.
 DWDdata/subdaily_standard_format_kl_10381_00_akt.txt or
 DWDdata/subdaily_standard_format_kl_10381_bis_1999.txt.gz}
 
-\item{fast}{Logical: use \code{readr::\link[readr]{read_fwf}} 
-instead of \code{\link{read.fwf}}? 
+\item{fast}{Logical: use \code{\link[readr:read_fwf]{readr::read_fwf()}} instead of \code{\link[=read.fwf]{read.fwf()}}?
 Takes 0.1 instead of 20 seconds but requires package to be installed.
 if fast=TRUE, \code{fileEncoding} is ignored.
 DEFAULT: TRUE}
 
-\item{fileEncoding}{\link{read.table} \link{file} encoding.
-DEFAULT: "latin1" (potentially needed on Linux, 
+\item{fileEncoding}{\code{\link[=read.table]{read.table()}} file encoding.
+DEFAULT: "latin1" (potentially needed on Linux,
 optional but not hurting on windows)}
 
 \item{formIndex}{Single object: Index used to select column widts and NA values.
 To use a current / custom index, see the source code of
-\code{\link{updateIndexes}} at
+\code{\link[=updateIndexes]{updateIndexes()}} at
 \url{https://github.com/brry/rdwd/blob/master/R/updateIndexes.R}.
-DEFAULT: \code{rdwd:::\link{formatIndex}}}
+DEFAULT: \code{\link{formatIndex}}}
 
-\item{\dots}{Further arguments passed to \code{\link{read.fwf}}
-or \code{readr::\link[readr]{read_fwf}}}
+\item{quiet}{Suppress subfunction name message?
+DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
+
+\item{\dots}{Further arguments passed to \code{\link[=read.fwf]{read.fwf()}} or \code{\link[readr:read_fwf]{readr::read_fwf()}}}
 }
 \value{
 data.frame with column names as per \code{\link{formatIndex}}.
@@ -42,10 +44,10 @@ data.frame with column names as per \code{\link{formatIndex}}.
 NA-indicators have been processed into NAs.
 }
 \description{
-read subdaily/standard_format dwd data. 
-Intended to be called via \code{\link{readDWD}}.\cr
+read subdaily/standard_format dwd data.
+Intended to be called via \code{\link[=readDWD]{readDWD()}}.\cr
 All other observational data at \code{\link{dwdbase}} can be read
-with \code{\link{readDWD.data}}, except for the multi_annual and 
+with \code{\link[=readDWD.data]{readDWD.data()}}, except for the multi_annual and
 subdaily/standard_format data.
 }
 \examples{
@@ -63,7 +65,7 @@ plot(sf$Date, sf$SHK, type="l")
 # Plot all columns:
 if(FALSE){ # not run in any automated testing
 tmp <- tempfile(fileext=".pdf")
-char2fact <- function(x) 
+char2fact <- function(x)
  {
  if(all(is.na(x))) return(rep(-9, len=length(x)))
  if(!is.numeric(x)) as.factor(x) else x
@@ -77,7 +79,7 @@ berryFunctions::openFile(tmp)
 }
 }
 \seealso{
-\code{\link{readDWD}}
+\code{\link[=readDWD]{readDWD()}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Oct 2019

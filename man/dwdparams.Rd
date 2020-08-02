@@ -4,7 +4,9 @@
 \name{dwdparams}
 \alias{dwdparams}
 \title{DWD parameter explanations}
-\format{An object of class \code{data.frame} with 160 rows and 2 columns.}
+\format{
+An object of class \code{data.frame} with 163 rows and 2 columns.
+}
 \usage{
 dwdparams
 }
@@ -13,7 +15,7 @@ Short German parameter explanations for the DWD abbreviations
 on the CDC FTP server.\cr
 These are manually created by me and might need to be expanded if the DWD adds
 more abbreviations.\cr
-\code{\link{readVars}} maps them to the variable abbreviations in the
+\code{\link[=readVars]{readVars()}} maps them to the variable abbreviations in the
 \code{"Metadaten_Parameter.*txt"} file in any given zip folder
 and will warn about missing entries.
 }
@@ -22,7 +24,7 @@ head(dwdparams)
 
 }
 \seealso{
-\code{\link{readVars}}, \code{\link{readDWD}}
+\code{\link[=readVars]{readVars()}}, \code{\link[=readDWD]{readDWD()}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Jun 2018

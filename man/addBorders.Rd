@@ -7,13 +7,13 @@
 addBorders(de = "grey80", eu = "black", add = TRUE, ...)
 }
 \arguments{
-\item{de}{Color for Bandeslaender line. NA to suppress. DEFAULT: "grey80"}
+\item{de}{Color for Bundeslaender line (\code{\link{DEU}}). NA to suppress. DEFAULT: "grey80"}
 
-\item{eu}{Color for countries line. NA to suppress. DEFAULT: "black"}
+\item{eu}{Color for countries line (\code{\link{EUR}}). NA to suppress. DEFAULT: "black"}
 
 \item{add}{Logical: add to existing plot? DEFAULT: TRUE}
 
-\item{\dots}{Further arguments passed to \code{raster::\link[raster]{plot}}}
+\item{\dots}{Further arguments passed to \code{\link[raster:plot]{raster::plot()}}}
 }
 \value{
 invisible list with DEU and EUR
@@ -23,7 +23,7 @@ add country and Bundesland borders to a map
 }
 \examples{
 if(requireNamespace("raster", quietly=TRUE)){
-plot(1, xlim=c(2,16), ylim=c(47,55)) 
+plot(1, xlim=c(2,16), ylim=c(47,55))
 addBorders()
 plot(1, xlim=c(2,16), ylim=c(47,55))
 addBorders(de="orange", eu=NA)
@@ -31,7 +31,7 @@ addBorders(de="orange", eu=NA)
 
 }
 \seealso{
-\code{\link{DEU}}, \code{\link{EUR}}
+\code{\link{plotRadar}}, \code{\link{DEU}}, \code{\link{EUR}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Aug 2019

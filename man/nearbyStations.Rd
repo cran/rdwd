@@ -14,7 +14,7 @@ nearbyStations(
   mindate = NA,
   hasfileonly = TRUE,
   statname = "nearbyStations target location",
-  quiet = FALSE,
+  quiet = rdwdquiet(),
   ...
 )
 }
@@ -26,7 +26,7 @@ nearbyStations(
 \item{radius}{Maximum distance [km] within which stations will be selected}
 
 \item{res, var, per}{Restrictions for dataset type as documented in
-\code{\link{selectDWD}}. Each can be a vector of entries.
+\code{\link[=selectDWD]{selectDWD()}}. Each can be a vector of entries.
 DEFAULTS: NA (ignored)}
 
 \item{mindate}{Minimum dataset ending date (as per metadata). DEFAULT: NA}
@@ -37,9 +37,9 @@ open-access file available? DEFAULT: TRUE}
 \item{statname}{Character: name for target location. DEFAULT:
 "nearbyStations target location"}
 
-\item{quiet}{Logical: suppress progress messages? DEFAULT: FALSE}
+\item{quiet}{Logical: suppress progress messages? DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
 
-\item{\dots}{Further arguments passed to \code{\link{selectDWD}}}
+\item{\dots}{Further arguments passed to \code{\link[=selectDWD]{selectDWD()}}}
 }
 \value{
 \code{\link{metaIndex}} subset with additional columns "dist" and "url"
@@ -53,14 +53,14 @@ m <- nearbyStations(49.211784, 9.812475, radius=30,
     res=c("daily","hourly"), var= c("precipitation","more_precip","kl") ,
     mindate=as.Date("2016-05-30"), statname="Braunsbach catchment center")
 # View(m)
-    
+
 # for a continued example of this, see the vignette in chapter
 # use case: plot all rainfall values around a given point
 # browseURL("https://bookdown.org/brry/rdwd")
 
 }
 \seealso{
-\code{\link{selectDWD}}, \code{\link{metaIndex}}
+\code{\link[=selectDWD]{selectDWD()}}, \code{\link{metaIndex}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Mar 2017

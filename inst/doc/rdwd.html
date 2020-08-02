@@ -15,6 +15,35 @@
 
 <title>rdwd: climate data from the German Weather Service</title>
 
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
+// v0.0.1
+// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
+
+document.addEventListener('DOMContentLoaded', function() {
+  const codeList = document.getElementsByClassName("sourceCode");
+  for (var i = 0; i < codeList.length; i++) {
+    var linkList = codeList[i].getElementsByTagName('a');
+    for (var j = 0; j < linkList.length; j++) {
+      if (linkList[j].innerHTML === "") {
+        linkList[j].setAttribute('aria-hidden', 'true');
+      }
+    }
+  }
+});
+</script>
 
 
 
@@ -231,12 +260,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <li>gridded raster data from radar + interpolation</li>
 <li>european data stock slowly growing (but reading functions not tested yet)</li>
 </ul>
-<p>The actual vignette is available here: <a href="https://bookdown.org/brry/rdwd" class="uri">https://bookdown.org/brry/rdwd</a></p>
-<ul>
-<li>it has grown too big for CRAN</li>
-<li>the constant rebuilding is an unnecessary load on the DWD FTP Server</li>
-<li>The bookdown page enables a very nicely structured html layout</li>
-</ul>
+<p>All further information is available on the website: <a href="https://bookdown.org/brry/rdwd" class="uri">https://bookdown.org/brry/rdwd</a></p>
 
 
 

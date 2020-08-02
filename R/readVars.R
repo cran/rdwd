@@ -1,15 +1,15 @@
 #' Process data from the DWD CDC FTP Server
 #' 
-#' Read climate variables (column meta data) from zip folders downloaded with 
-#' \code{\link{dataDWD}}.
-#' The metadata file \code{"Metadaten_Parameter.*txt"} in the zip folder \code{file} 
+#' Read climate variables (column meta data) from zip folders downloaded with
+#' [dataDWD()].
+#' The metadata file `"Metadaten_Parameter.*txt"` in the zip folder `file`
 #' is read, processed and returned as a data.frame.\cr
-#' \code{file} can be a vector with several filenames. 
+#' `file` can be a vector with several filenames.
 #' 
-#' @return data.frame of the desired dataset, 
+#' @return data.frame of the desired dataset,
 #'         or a named list of data.frames if length(file) > 1.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jun 2018
-#' @seealso \code{\link{dataDWD}}, \code{\link{readDWD}}, \code{\link{dwdparams}}
+#' @seealso [dataDWD()], [readDWD()], [`dwdparams`], [newColumnNames()]
 #' @keywords file
 #' @importFrom utils read.table unzip
 #' @importFrom berryFunctions checkFile na9 traceCall
@@ -19,14 +19,16 @@
 #' @examples
 #' # see dataDWD
 #' 
-#' @param file   Char (vector): name(s) of the file(s) downloaded with \code{\link{dataDWD}},
-#'               e.g. "~/DWDdata/tageswerte_KL_02575_akt.zip" 
+#' @param file    Char (vector): name(s) of the file(s) downloaded with [dataDWD()],
+#'                e.g. "~/DWDdata/tageswerte_KL_02575_akt.zip"
+#' @param params  data.frame: Parameter explanations. DEFAULT: [`dwdparams`]
 #' @param progbar Logical: present a progress bar with estimated remaining time?
-#'               If missing and length(file)==1, progbar is internally set to FALSE.
-#'               DEFAULT: TRUE
+#'                If missing and length(file)==1, progbar is internally set to FALSE.
+#'                DEFAULT: TRUE
 #' 
 readVars <- function(
 file,
+params=dwdparams,
 progbar=TRUE
 )
 {
@@ -49,7 +51,7 @@ f <- dir(exdir, pattern="Metadaten_Parameter.*txt", full.names=TRUE)
 if(length(f)!=1) return(length(f))
 nr <- readLines(f) # number of rows
 nr <- sum(!substr(nr, 1, 7) %in% c("Legende", "generie"))
-tab <- read.table(f, na.strings=na9(), sep=";", header=TRUE, nrows=nr-1, 
+tab <- read.table(f, na.strings=na9(), sep=";", header=TRUE, nrows=nr-1,
                   stringsAsFactors=FALSE)
 #
 tab <- tab[,c("Parameter", "Parameterbeschreibung", "Einheit")]
@@ -63,7 +65,7 @@ if(any(dupli)) warning(traceCall(3, "", ": "), "The following entries are",
 rownames(tab) <- NULL
 #
 # Merge with short variable descriptions:
-tab2 <- merge(dwdparams, tab, all.y=TRUE)
+tab2 <- merge(params, tab, all.y=TRUE)
 kurzna <- is.na(tab2$Kurz)
 if(any(kurzna)) warning(traceCall(3, "", ": "), "The following entries are not",
                         " abbreviated yet: ", toString(tab2$Parameter[kurzna]),
@@ -80,7 +82,7 @@ return(tab2)
 #
 # Warn about zip folders with no meta file:
 nometa <- sapply(output, class)=="integer"
-if(any(nometa)) 
+if(any(nometa))
  {
  msg <- paste(unlist(output[nometa]), file[nometa], sep=" in ")
  exp <- grepl("_minute", file[nometa]) # expected no meta files
@@ -88,8 +90,8 @@ if(any(nometa))
            "meta-information in most of the zip folders (as of 2019-02).\n")
  mnexp <- "\nPlease contact berry-b@gmx.de with with a copy of this warning.\n"
  warning(traceCall(1, "", ": "), "The number of determined ",
-         "'Metadaten_Parameter*.txt' files should be 1, but is instead:\n", 
-         paste(msg[ exp],collapse="\n"), if(any( exp)) mexp, 
+         "'Metadaten_Parameter*.txt' files should be 1, but is instead:\n",
+         paste(msg[ exp],collapse="\n"), if(any( exp)) mexp,
          paste(msg[!exp],collapse="\n"), if(any(!exp)) mnexp,
          call.=FALSE)
  }
@@ -108,12 +110,12 @@ return(output)
 #' on the CDC FTP server.\cr
 #' These are manually created by me and might need to be expanded if the DWD adds
 #' more abbreviations.\cr
-#' \code{\link{readVars}} maps them to the variable abbreviations in the
-#' \code{"Metadaten_Parameter.*txt"} file in any given zip folder
+#' [readVars()] maps them to the variable abbreviations in the
+#' `"Metadaten_Parameter.*txt"` file in any given zip folder
 #' and will warn about missing entries.
 #' 
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jun 2018
-#' @seealso \code{\link{readVars}}, \code{\link{readDWD}}
+#' @seealso [readVars()], [readDWD()]
 #' @keywords datasets
 #' @export
 #' @examples
@@ -329,7 +331,7 @@ FX_10	Windgeschwindigkeit_Max
 FMX_10	Windgeschwindigkeit_MaxMean
 FNX_10	Windgeschwindigkeit_Min
 D	Windrichtung
-D	Windrichtung
+DD	Windrichtung
 DD_10	Windrichtung
 DK_TER	Windrichtung
 DK_TER	Windrichtung
@@ -422,5 +424,7 @@ STURM_8	Sturm_8Bft
 STURM_8	Sturm_8Bft
 TAU	Tau
 TAU	Tau
+SLA_10	Windgeschwindigkeit_STABW_lat
+SLO_10	Windgeschwindigkeit_STABW_lon
 "))
 rownames(dwdparams) <- dwdparams$Parameter

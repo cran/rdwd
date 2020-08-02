@@ -1,21 +1,20 @@
 #' Create file and meta index of the DWD CDC FTP Server
 #' 
 #' This is mainly an internal function.
-#' Create data.frames out of the vector index returned by \code{\link{indexFTP}}.
-#' For \code{\link{fileIndex}} (the first output element) \code{createIndex}
+#' Create data.frames out of the vector index returned by [indexFTP()].
+#' For [`fileIndex`] (the first output element) `createIndex`
 #' tries to obtain res, var, per, file, id, start and end from the paths.
-#' If \code{meta=TRUE}, \code{\link{metaIndex}} and \code{\link{geoIndex}} are also
+#' If `meta=TRUE`, [`metaIndex`] and [`geoIndex`] are also
 #' created. They combine all Beschreibung files into a single data.frame.\cr
-#' If you create your own index as suggested in selectDWD (argument \code{findex}),
+#' If you create your own index as suggested in selectDWD (argument `findex`),
 #' you can read the produced file as shown in the example section.
 #' 
 #' @return invisible data.frame (or if meta=TRUE, list with two data.frames)
 #' with a number of columns inferred from the paths. Each is also written to disc.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct-Nov 2016, June 2017
-#' @seealso \code{\link{indexFTP}}, \code{\link{updateIndexes}}
-#' \code{\link{index}}, \code{\link{selectDWD}}
+#' @seealso [indexFTP()], [updateIndexes()], [`index`], [selectDWD()]
 #' @keywords manip
-#' @importFrom berryFunctions l2df convertUmlaut newFilename sortDF traceCall
+#' @importFrom berryFunctions l2df convertUmlaut newFilename sortDF traceCall seqPal
 #' @importFrom utils write.table
 #' @importFrom pbapply pbsapply pblapply
 #' @importFrom graphics abline
@@ -27,35 +26,37 @@
 #' ind
 #' link2 <- "daily/kl/historical/KL_Tageswerte_Beschreibung_Stationen.txt"
 #' link3 <- "daily/kl/recent/KL_Tageswerte_Beschreibung_Stationen.txt"
-#' ind2 <- createIndex(c(link,link2,link3), dir=tempdir(), meta=TRUE)
+#' ind2 <- createIndex(c(link,link2,link3), dir=tempdir(), meta=TRUE, checkwarn=FALSE)
 #' lapply(ind2, head)
 #' }
 #' 
-#' @param paths Char: vector of DWD paths returned by \code{\link{indexFTP}} called
-#'              with the same \code{base} value as this function
+#' @param paths Char: vector of DWD paths returned by [indexFTP()] called
+#'              with the same `base` value as this function
 #' @param base  Main directory of DWD ftp server, defaulting to observed climatic records.
-#'              DEFAULT: \code{\link{dwdbase}}
+#'              DEFAULT: [`dwdbase`]
 #' @param dir   Char: writeable directory name where to save the main output(s).
-#'              Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}
-#' @param fname Char: Name of file in \code{dir} in which to write \code{\link{fileIndex}}.
-#'              Use \code{fname=""} to suppress writing. DEFAULT: "fileIndex.txt"
+#'              Created if not existent. DEFAULT: "DWDdata" at current [getwd()]
+#' @param fname Char: Name of file in `dir` in which to write [`fileIndex`].
+#'              Use `fname=""` to suppress writing. DEFAULT: "fileIndex.txt"
 #' @param meta  Logical: should metaIndex also be created from fileIndex?
-#'              Uses \code{\link{dataDWD}} to download files if not present.
+#'              Uses [dataDWD()] to download files if not present.
 #'              DEFAULT: FALSE
-#' @param metadir Char: Directory (subfolder of \code{dir}) where original
+#' @param metadir Char: Directory (subfolder of `dir`) where original
 #'              description files are downloaded to if meta=TRUE. Passed to
-#'              \code{\link{dataDWD}}. "" to write in \code{dir}. DEFAULT: "meta"
-#' @param mname Char: Name of file in \code{dir} (not \code{metadir}) in which to
-#'              write \code{\link{metaIndex}}.
-#'              Use \code{mname=""} to suppress writing. DEFAULT: "metaIndex.txt"
-#' @param gname Filename for \code{\link{geoIndex}}. DEFAULT: "geoIndex.txt"
-#' @param overwrite Logical: Overwrite existing \code{fname / mname / gname} files? 
-#'              If not, "_n" is added to the filenames, see 
-#'              \code{berryFunctions::\link[berryFunctions]{newFilename}}.
+#'              [dataDWD()]. "" to write in `dir`. DEFAULT: "meta"
+#' @param mname Char: Name of file in `dir` (not `metadir`) in which to
+#'              write [`metaIndex`].
+#'              Use `mname=""` to suppress writing. DEFAULT: "metaIndex.txt"
+#' @param gname Filename for [`geoIndex`]. DEFAULT: "geoIndex.txt"
+#' @param overwrite Logical: Overwrite existing `fname / mname / gname` files?
+#'              If not, "_n" is added to the filenames, see
+#'              [berryFunctions::newFilename()].
 #'              DEFAULT: FALSE
-#' @param checkwarn Logical: warn about \code{\link{checkIndex}} issues? DEFAULT: TRUE
-#' @param quiet Logical: Suppress messages about progress and filenames? DEFAULT: FALSE
-#' @param \dots Further arguments passed to \code{\link{dataDWD}} for the meta part.
+#' @param checkwarn Logical: warn about [checkIndex()] issues? DEFAULT: TRUE
+#' @param checklog Logfile for [checkIndex()]. DEFAULT: [tempfile()]
+#' @param quiet Logical: Suppress messages about progress and filenames?
+#'              DEFAULT: FALSE through [rdwdquiet()]
+#' @param \dots Further arguments passed to [dataDWD()] for the meta part.
 #' 
 createIndex <- function(
 paths,
@@ -68,7 +69,8 @@ mname="metaIndex.txt",
 gname="geoIndex.txt",
 overwrite=FALSE,
 checkwarn=TRUE,
-quiet=FALSE,
+checklog=tempfile(),
+quiet=rdwdquiet(),
 ...
 )
 {
@@ -89,10 +91,10 @@ any1min <- any(prec1min)
 ncolumns <- 4 + any1min # supposed number of columns: 4, 5 if any prec1min in paths
 # split into parts:
 if(!quiet) messaget("Splitting filenames...")
-fileIndex <- l2df(pbapply::pblapply(fileIndex,function(x) strsplit(x,"/")[[1]]))
+fileIndex <- berryFunctions::l2df(pbapply::pblapply(fileIndex,function(x) strsplit(x,"/")[[1]]))
 # check if there are actually 4/5 columns (might be different with non-standard base)
-if(ncol(fileIndex)!=ncolumns) stop(traceCall(1, "in ", ": "), "index does not have ",
-                        ncolumns," columns, but ", ncol(fileIndex), call.=FALSE)
+if(ncol(fileIndex)!=ncolumns) stop(berryFunctions::traceCall(1, "in ", ": "),
+    "index does not have ", ncolumns," columns, but ", ncol(fileIndex), call.=FALSE)
 if(any1min) fileIndex[prec1min,4] <- fileIndex[prec1min,5]
 colnames(fileIndex) <- c("res","var","per","file",if(any1min) "dummyfromyear1minute")
 file <- fileIndex$file
@@ -100,11 +102,11 @@ fileIndex <- fileIndex[,1:3] # file will be re-attached (with path) as the last 
 #
 # Get detailed info from file name elements:
 if(!quiet) messaget("Extracting metadata from filenames...")
-info <- l2df(pbapply::pblapply(file, function(x) rev(strsplit(x, "[-_.]")[[1]])))
+info <- berryFunctions::l2df(pbapply::pblapply(file, function(x) rev(strsplit(x, "[-_.]")[[1]])))
 # Station ID (identification number):
 id <- ""
 per <- fileIndex$per
-sol <- fileIndex$var=="solar" 
+sol <- fileIndex$var=="solar"
 zip <- info[,1]=="zip"
 if(!quiet) messaget("Extracting station IDs from filenames...")
 id <- ifelse(zip & per=="historical"       , info[,5], id)
@@ -150,7 +152,7 @@ owd <- dirDWD(dir, quiet=quiet|fname=="" )
 on.exit(setwd(owd), add=TRUE)
 if(fname!="")
   {
-  outfile <- newFilename(fname, mid=" ", quiet=quiet, ignore=overwrite)
+  outfile <- berryFunctions::newFilename(fname, mid=" ", quiet=quiet, ignore=overwrite)
   write.table(fileIndex, file=outfile, sep="\t", row.names=FALSE, quote=FALSE)
   }
 # Potential (DEFAULT) output:
@@ -167,12 +169,13 @@ sel <- sel & grepl("Beschreibung", fileIndex$path)
 #descdupli <- basename(paths)=="ein_min_rr_Beschreibung_Stationen.txt" & grepl("/20", dirname(paths))
 #sel <- sel & !descdupli
 
-if(sum(sel)<2) stop(traceCall(1, "in ", ": "),
+if(sum(sel)<2) stop(berryFunctions::traceCall(1, "in ", ": "),
               "There need to be at least two 'Beschreibung' files. (There is ",
               sum(sel),")", call.=FALSE)
 # download and read those files:
-metas <- dataDWD(fileIndex[sel, "path"], base=base, joinbf=TRUE, dir=metadir, 
-                 overwrite=overwrite, stand=FALSE, ...)
+metas <- dataDWD(fileIndex[sel, "path"], base=base, joinbf=TRUE, dir=metadir,
+                 overwrite=overwrite, read=FALSE, ...)
+metas <- readDWD(metas, type="meta", quiet=TRUE)
 for(i in seq_along(metas))
   {
   metas[[i]]$res <- fileIndex[sel, "res"][i]
@@ -183,7 +186,7 @@ for(i in seq_along(metas))
 # check if all files have the same column names:
 cnames <- lapply(metas, colnames)
 sapply(2:length(cnames), function(i) if(!all(cnames[[i]] == cnames[[1]]))
-    warning(traceCall(1, "in ", ": "), "The file ", fileIndex[sel, "path"][i],
+    warning(berryFunctions::traceCall(1, "in ", ": "), "The file ", fileIndex[sel, "path"][i],
          "\nhas incorrect column names: ", toString(cnames[[i]]),
          "\n instead of \n", toString(cnames[[1]]), call.=FALSE))
 #
@@ -213,7 +216,7 @@ metaIndex$bis_datum <- as.Date(as.character(metaIndex$bis_datum),"%Y%m%d")
 # Write to disc
 if(mname!="")
   {
-  outfile <- newFilename(mname, mid=": ", quiet=quiet, ignore=overwrite)
+  outfile <- berryFunctions::newFilename(mname, mid=": ", quiet=quiet, ignore=overwrite)
   write.table(metaIndex, file=outfile, sep="\t", row.names=FALSE, quote=FALSE)
   }
 #
@@ -283,16 +286,17 @@ rownames(geoIndex) <- NULL
 # Write to disc:
 if(gname!="")
   {
-  outfile <- newFilename(gname, mid=": ", quiet=quiet, ignore=overwrite)
+  outfile <- berryFunctions::newFilename(gname, mid=": ", quiet=quiet, ignore=overwrite)
   write.table(geoIndex, file=outfile, sep="\t", row.names=FALSE, quote=FALSE)
   }
 #
 # Check all indexes:
-checks <- checkIndex(fileIndex, metaIndex, geoIndex, fast=TRUE, warn=checkwarn)
+checks <- checkIndex(fileIndex, metaIndex, geoIndex, fast=TRUE, warn=checkwarn,
+                     quiet=quiet, logfile=checklog)
 #
 # Output -----------------------------------------------------------------------
 if(!quiet) messaget("Done.")
-return(invisible(list(fileIndex=fileIndex, metaIndex=metaIndex, geoIndex=geoIndex, 
+return(invisible(list(fileIndex=fileIndex, metaIndex=metaIndex, geoIndex=geoIndex,
                       checks=checks)))
 }
 
@@ -318,7 +322,7 @@ geoIndexAll$maxdist <- dist[as.character(geoIndexAll$id)]
 # Write to disc:
 if(aname!="")
   {
-  outfile <- newFilename(aname, mid=": ", quiet=quiet)
+  outfile <- berryFunctions::newFilename(aname, mid=": ", quiet=quiet)
   write.table(geoIndexAll, file=outfile, sep="\t", row.names=FALSE, quote=FALSE)
   }
 #
@@ -367,7 +371,7 @@ library(leaflet)
 
 farapart <- geoIndexAll[geoIndexAll$maxdist>0.5,]
 farapart$display <- paste0(farapart$display, "<br>maxDist: ", round(farapart$maxdist,2))
-col <- seqPal(100)[classify(farapart$maxdist, method="logspaced", breaks=c(100,1.05))$index]
+col <- berryFunctions::seqPal(100)[classify(farapart$maxdist, method="logspaced", breaks=c(100,1.05))$index]
 #col_leg <- seqPal(100)[classify(1:26/2, method="logspaced", breaks=c(100,1.05),
 #Range=range(farapart$maxdist))$index]
 mapfarapart <- leaflet(farapart) %>% addTiles() %>%

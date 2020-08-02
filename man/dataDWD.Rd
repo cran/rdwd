@@ -5,95 +5,106 @@
 \title{Download data from the DWD CDC FTP Server}
 \usage{
 dataDWD(
-  file,
+  url,
   base = dwdbase,
   joinbf = FALSE,
   dir = "DWDdata",
   force = FALSE,
   overwrite = FALSE,
+  read = TRUE,
   dbin = FALSE,
+  dfargs = NULL,
   sleep = 0,
-  quiet = FALSE,
   progbar = !quiet,
   browse = FALSE,
-  read = TRUE,
   ntrunc = 2,
-  dfargs = NULL,
+  file = NULL,
+  quiet = rdwdquiet(),
   ...
 )
 }
 \arguments{
-\item{file}{Char (vector): complete file URL(s) (including base and filename.zip) as returned by
-\code{\link{selectDWD}}. Can be a vector with several filenames.}
+\item{url}{Char (vector): complete file URL(s) (including base and filename.zip)
+as returned by \code{\link[=selectDWD]{selectDWD()}}. Can be a vector with several FTP URLs.}
 
 \item{base}{Single char: base URL that will be removed from output file names.
 DEFAULT: \code{\link{dwdbase}}}
 
-\item{joinbf}{Logical: paste \code{base} and \code{file} together? 
+\item{joinbf}{Logical: paste \code{base} and \verb{file url} together?
+Needed mostly for data at \code{\link{gridbase}}.
 DEFAULT: FALSE (selectDWD returns complete URLs already)}
 
 \item{dir}{Char: Writeable directory name where to save the downloaded file.
-Created if not existent. DEFAULT: "DWDdata" at current \code{\link{getwd}()}}
+Created if not existent. DEFAULT: "DWDdata" at current \code{\link[=getwd]{getwd()}}}
 
 \item{force}{Logical (vector): always download, even if the file already exists in \code{dir}?
 Use NA to force re-downloading files older than 24 hours.
 Use a numerical value to force after that amount of hours.
-Note you might want to set \code{overwrite=TRUE} as well.
-If FALSE, the file is still read (or name returned). DEFAULT: FALSE}
+Note: if \code{force!=FALSE}, you might want to set \code{overwrite=TRUE} as well.
+If \code{force=FALSE}, the file is still read (or name returned).
+DEFAULT: FALSE}
 
 \item{overwrite}{Logical (vector): if force=TRUE, overwrite the existing file
 rather than append "_1"/"_2" etc to the filename? DEFAULT: FALSE}
 
+\item{read}{Logical: read the file(s) with \code{\link[=readDWD]{readDWD()}}? If FALSE,
+only download is performed and the filename(s) returned. DEFAULT: TRUE}
+
 \item{dbin}{Logical: Download binary file, i.e. add \code{mode="wb"} to the
-\code{\link{download.file}} call? This is needed for .tar files 
-(see \code{\link{readDWD.asc}}) and binary files like those at 
+\code{\link[=download.file]{download.file()}} call? This is needed for .tar files
+(see \code{\link[=readDWD.asc]{readDWD.asc()}}) and binary files like those at
 \href{https://opendata.dwd.de/weather/radar/radolan/rw/}{weather/radar/radolan}.
 This seems to be a CRLF issue on MS Windows.
 DEFAULT: FALSE}
 
-\item{sleep}{Number. If not 0, a random number of seconds between 0 and
-\code{sleep} is passed to \code{\link{Sys.sleep}} after each download
-to avoid getting kicked off the FTP-Server. DEFAULT: 0}
+\item{dfargs}{Named list of additional arguments passed to \code{\link[=download.file]{download.file()}}
+Note that mode="wb" is already passed if \code{dbin=TRUE}}
 
-\item{quiet}{Logical: suppress message about directory / filenames? DEFAULT: FALSE}
+\item{sleep}{Number. If not 0, a random number of seconds between 0 and
+\code{sleep} is passed to \code{\link[=Sys.sleep]{Sys.sleep()}} after each download
+to avoid getting kicked off the FTP-Server,
+see note in \code{\link[=indexFTP]{indexFTP()}}. DEFAULT: 0}
 
 \item{progbar}{Logical: present a progress bar with estimated remaining time?
 If missing and length(file)==1, progbar is internally set to FALSE.
 Only works if the R package \code{pbapply} is available. DEFAULT: TRUE (!quiet)}
 
-\item{browse}{Logical: open repository via \code{\link{browseURL}} and
+\item{browse}{Logical: open repository via \code{\link[=browseURL]{browseURL()}} and
 return URL folder path? If TRUE, no data is downloaded.
 If file has several values, only unique folders will be opened.
 DEFAULT: FALSE}
 
-\item{read}{Logical: read the file(s) with \code{\link{readDWD}}? If FALSE,
-only download is performed and the filename(s) returned. DEFAULT: TRUE}
-
 \item{ntrunc}{Single integer: number of filenames printed in messages
 before they get truncated with message "(and xx more)". DEFAULT: 2}
 
-\item{dfargs}{Named list of additional arguments passed to \code{\link{download.file}}
-Note that mode="wb" is already passed if \code{dbin=TRUE}}
+\item{file}{Deprecated since rdwd version 1.3.34, 2020-07-28.}
 
-\item{\dots}{Further arguments passed to \code{\link{readDWD}}, 
-like fread, varnames etc. Dots were passed to 
-\code{\link{download.file}} prior to rdwd 0.11.7 (2019-02-25)}
+\item{quiet}{Logical: suppress message about directory / filenames?
+DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
+
+\item{\dots}{Further arguments passed to \code{\link[=readDWD]{readDWD()}},
+like fread, varnames etc. Dots were passed to
+\code{\link[=download.file]{download.file()}} prior to rdwd 0.11.7 (2019-02-25)}
 }
 \value{
 Presuming downloading and processing were successful:
-        if \code{read=TRUE}, a data.frame of the desired dataset
-        (as returned by \code{\link{readDWD}}),
-        otherwise the filename as saved on disc
-        (may have "_n" appended in name, see \code{\link{newFilename}}).\cr
-        If length(file)>1, the output is a list of data.frames / vector of filenames.\cr
-        The output is always invisible.
+if \code{read=TRUE}, the desired dataset
+(as returned by \code{\link[=readDWD]{readDWD()}}),
+otherwise the filename as saved on disc
+(may have "_n" appended in name, see \code{\link[=newFilename]{newFilename()}}).\cr
+If length(file)>1, the output is a list of outputs / vector of filenames.\cr
+The output is always invisible.
 }
 \description{
 Get climate data from the German Weather Service (DWD) FTP-server.
-The desired .zip (or .txt) dataset is downloaded into \code{dir}.
-If \code{read=TRUE}, it is also read, processed and returned as a data.frame.\cr
-To solve "errors in download.file: cannot open URL", see 
-\url{https://bookdown.org/brry/rdwd/station-selection.html#fileindex}.\cr
+The desired dataset is downloaded into \code{dir}.
+If \code{read=TRUE}, it is also read and processed.\cr
+\code{dataDWD} handles vectors of URLs,
+displays progress bars (if the package \code{pbapply} is available)
+and by default does not re-download data already in \code{dir}
+(but see argument \code{force} to update files).\cr
+To solve "errors in download.file: cannot open URL", see
+\url{https://bookdown.org/brry/rdwd/fileindex.html}.\cr
 }
 \examples{
 \dontrun{ ## requires internet connection
@@ -134,10 +145,10 @@ potsdam <- potsdam[!duplicated(potsdam$MESS_DATUM),]
 
 }
 \seealso{
-\code{\link{selectDWD}}. \code{\link{readDWD}}, \code{\link{download.file}}.\cr
-         \url{https://bookdown.org/brry/rdwd}\cr
-         Helpful for plotting: \code{berryFunctions::\link[berryFunctions]{monthAxis}},
-         see also \code{berryFunctions::\link[berryFunctions]{climateGraph}}
+\code{\link[=selectDWD]{selectDWD()}}. \code{\link[=readDWD]{readDWD()}}, \code{\link[=download.file]{download.file()}}.\cr
+\url{https://bookdown.org/brry/rdwd}\cr
+Helpful for plotting: \code{\link[berryFunctions:monthAxis]{berryFunctions::monthAxis()}},
+see also \code{\link[berryFunctions:climateGraph]{berryFunctions::climateGraph()}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Jun-Oct 2016

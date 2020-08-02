@@ -1,13 +1,16 @@
 #' @title update rdwd indexes
-#' @description This is meant to be called with getwd at the 
+#' @description This is meant to be called with getwd at the
 #'  rdwd package source code directory to update the indexes with one single call.
-#' @return \code{\link{checkIndex}} results
+#' @return [checkIndex()] results
+#' @importFrom berryFunctions sortDF
+#' @importFrom tools resaveRdaFiles
+#' @importFrom utils read.table write.table
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct 2019
-#' @seealso \code{\link{createIndex}}, \code{graphics::\link[graphics]{plot}}
+#' @seealso [createIndex()]
 #' @keywords data file internal
-#' @examples 
+#' @examples
 #' # number of files at dwdbase
-#' #  25'757 (2017-03-14) 
+#' #  25'757 (2017-03-14)
 #' # 218'593 (2018-03-25)
 #' # 228'830 (2018-11-26)
 #' # 240'737 (2019-02-19)
@@ -17,21 +20,33 @@
 #' # 255'252 (2019-07-31)
 #' # 254'925 (2019-09-17)
 #' # 254'943 (2019-10-26)
-#'  
+#' # 266'841 (2020-03-16)
+#' # 265'712 (2020-04-10)
+#' # 265'712 (2020-04-24)
+#' # 266'106 (2020-06-01)
+#' # 266'216 (2020-07-06)
+#' # 266'216 (2020-07-28)
+#' 
 #' # gridbase
 #' #  49'247 (2019-05-26)
 #' #  49'402 (2019-05-30)
 #' #  54'314 (2019-07-31)
 #' #  56'759 (2019-09-17)
 #' #  58'656 (2019-10-26)
+#' #  30'320 (2020-03-16)
+#' #  31'787 (2020-04-10)
+#' #  32'478 (2020-04-24)
+#' #  34'203 (2020-06-01)
+#' #  35'953 (2020-07-06)
+#' #  37'038 (2020-07-28)
 #' 
 #' @param dwdlocal Read "DWDdata/INDEX_of_DWD_.txt" instead of calling
-#'                 \code{\link{indexFTP}}? DEFAULT: FALSE
+#'                 [indexFTP()]? DEFAULT: FALSE
 #' @param grdlocal Read "DWDdata/INDEX_of_DWD_grids.txt" instead of calling
-#'                 \code{\link{indexFTP}}? DEFAULT: FALSE
-#' @param metaforce \code{\link{dataDWD} force} argument for BESCHREIBUNG files. 
+#'                 [indexFTP()]? DEFAULT: FALSE
+#' @param metaforce [dataDWD()] `force` argument for BESCHREIBUNG files.
 #'                 DEFAULT: NA (re-download if older than 24 hours)
-#'
+#' 
 updateIndexes <- function(
 dwdlocal=FALSE,
 grdlocal=FALSE,
@@ -53,16 +68,8 @@ if(grdlocal) grdfiles <- readLines("DWDdata/INDEX_of_DWD_grids.txt") else
  {
  messaget("Indexing FTP Server at gridbase...")
  grdfiles <- indexFTP("currentgindex", filename="grids", base=gridbase, overwrite=TRUE)
- } 
- 
-#
-message("While readDWD.meta is not revamped, change meta files manually:
-   - 10_minutes_wind_now_zehn_now_ff_Beschreibung_Stationen.txt
-   - 10_minutes_extreme_wind_now_zehn_now_fx_Beschreibung_Stationen.txt
-   First data row cannot contain spaces in the station name
-- 5 seconds to abort.")
-Sys.sleep(5)
-#
+ }
+
 messaget("Calling createIndex...")
 index <- createIndex(paths=dwdfiles, meta=TRUE, force=metaforce, overwrite=TRUE, checkwarn=FALSE)
 

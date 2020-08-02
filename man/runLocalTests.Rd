@@ -8,19 +8,24 @@ runLocalTests(
   dir_data = localtestdir(),
   dir_exmpl = localtestdir(folder = "misc/ExampleTests"),
   fast = FALSE,
+  devcheck = !fast,
   radar = !fast,
   all_Potsdam_files = !fast,
+  index = !fast,
+  indexfast = fast,
   examples = !fast,
-  quiet = FALSE
+  quiet = rdwdquiet()
 )
 }
 \arguments{
 \item{dir_data}{Reusable data location. Preferably not under version control.
-DEFAULT: \code{\link{localtestdir}()}}
+DEFAULT: \code{\link[=localtestdir]{localtestdir()}}}
 
 \item{dir_exmpl}{Reusable example location. DEFAULT: localtestdir(folder="misc/ExampleTests")}
 
 \item{fast}{Exclude many tests? DEFAULT: FALSE}
+
+\item{devcheck}{Run \code{devtools::check()}? DEFAULT: !fast}
 
 \item{radar}{Test reading radar example files. DEFAULT: !fast}
 
@@ -28,19 +33,23 @@ DEFAULT: \code{\link{localtestdir}()}}
 files are older than 24 hours. Reduce test time a lot by setting
 this to FALSE. DEFAULT: !fast}
 
+\item{index}{Run \code{\link[=checkIndex]{checkIndex()}}? DEFAULT: !fast}
+
+\item{indexfast}{\code{fast} option passed to \code{\link[=checkIndex]{checkIndex()}}. DEFAULT: !fast}
+
 \item{examples}{Run Examples (including donttest sections) DEFAULT: !fast}
 
-\item{quiet}{Suppress progress messages? DEFAULT: FALSE}
+\item{quiet}{Suppress progress messages? DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
 }
 \value{
 Time taken to run tests in minutes
 }
 \description{
-Run \code{rdwd} tests on local machine. Due to time-intensive 
+Run \code{rdwd} tests on local machine. Due to time-intensive
 data downloads, these tests are not run automatically on CRAN.
 }
 \seealso{
-\code{\link{localtestdir}}
+\code{\link[=localtestdir]{localtestdir()}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Apr-Oct 2019

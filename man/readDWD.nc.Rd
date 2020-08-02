@@ -4,38 +4,45 @@
 \alias{readDWD.nc}
 \title{read dwd netcdf data}
 \usage{
-readDWD.nc(file, gargs = NULL, var = "", toraster = TRUE, quiet = FALSE, ...)
+readDWD.nc(
+  file,
+  gargs = NULL,
+  var = "",
+  toraster = TRUE,
+  quiet = rdwdquiet(),
+  ...
+)
 }
 \arguments{
-\item{file}{Name of file on harddrive, like e.g. 
+\item{file}{Name of file on harddrive, like e.g.
 DWDdata/grids_germany/daily/Project_TRY/humidity/RH_199509_daymean.nc.gz}
 
-\item{gargs}{Named list of arguments passed to 
-\code{R.utils::\link[R.utils:compressFile]{gunzip}}, 
-see \code{\link{readDWD.raster}}. DEFAULT: NULL}
+\item{gargs}{Named list of arguments passed to
+\code{\link[R.utils:compressFile]{R.utils::gunzip()}}, see \code{\link[=readDWD.raster]{readDWD.raster()}}. DEFAULT: NULL}
 
-\item{var}{if toraster=FALSE: Charstring with name of variable to be read with 
-\code{ncdf4::\link[ncdf4]{ncvar_get}}. If not available, 
+\item{var}{if toraster=FALSE: Charstring with name of variable to be read with
+\code{\link[ncdf4:ncvar_get]{ncdf4::ncvar_get()}}. If not available,
 an interactive selection is presented.
 DEFAULT: "" (last variable)}
 
-\item{toraster}{Read file with \code{raster::\link[raster]{brick}}? 
-All further arguments will be ignored. Specify e.g. var through \dots.
-DEFAULT: TRUE}
+\item{toraster}{Read file with \code{\link[raster:brick]{raster::brick()}}?
+All further arguments will be ignored. Specify e.g. \code{var}
+through \dots as \code{varname}. DEFAULT: TRUE}
 
-\item{quiet}{Logical: Suppress time conversion failure warning? DEFAULT: FALSE}
+\item{quiet}{Logical: Suppress Suppress subfunction name message and
+time conversion failure warning?
+DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
 
-\item{\dots}{Further arguments passed to \code{raster::\link[raster]{brick}}
-or \code{ncdf4::\link[ncdf4]{nc_open}}}
+\item{\dots}{Further arguments passed to \code{\link[raster:brick]{raster::brick()}} or \code{\link[ncdf4:nc_open]{ncdf4::nc_open()}}}
 }
 \value{
-\code{raster::\link[raster]{brick}} object. Alternatively, 
+\code{\link[raster:brick]{raster::brick()}} object. Alternatively,
 if toraster=FALSE, a list with time, lat, lon, var, varname, file and cdf.
-\bold{cdf} is the output of \code{ncdf4::\link[ncdf4]{nc_open}}.
+\strong{cdf} is the output of \code{\link[ncdf4:nc_open]{ncdf4::nc_open()}}.
 }
 \description{
-Read netcdf data. 
-Intended to be called via \code{\link{readDWD}}.\cr
+Read netcdf data.
+Intended to be called via \code{\link[=readDWD]{readDWD()}}.\cr
 Note that \code{R.utils} and \code{ncdf4} must be installed to unzip and read the .nc.gz files.
 }
 \examples{
@@ -47,14 +54,12 @@ url <- "daily/Project_TRY/pressure/PRED_199606_daymean.nc.gz"  #  5 MB
 url <- "daily/Project_TRY/humidity/RH_199509_daymean.nc.gz"    # 25 MB
 file <- dataDWD(url, base=gridbase, joinbf=TRUE, dir=localtestdir(), read=FALSE)
 nc <- readDWD(file)
-ncp <- projectRasterDWD(nc, proj="nc", extent="nc")
- for(i in 1:3) raster::plot(ncp[[i]], col=seqPal(), 
-                            main=paste(nc@title, nc@z[[1]][i]))
-addBorders()
+ncp <- plotRadar(nc, main=paste(nc@title, nc@z[[1]]), layer=1:3,
+                 col=seqPal(), proj="nc", extent="nc")
 str(nc, max.level=2)
 
 raster::values(nc[[1]]) # obtain actual values into memory
- 
+
 raster::plot(nc[[1]]) # axes 0:938 / 0:720, the number of grid cells
 raster::plot(ncp[[1]])# properly projected, per default onto latlon
 
@@ -67,12 +72,12 @@ image(nc$var[,,1], col=seqPal(), asp=1.1)
 colPointsLegend(nc$var[,,1], title=paste(nc$varname, nc$time[1]))
 
 # interactive selection of variable:
-# nc <- readDWD(file, var="-") # uncommented to not block automated tests 
+# nc <- readDWD(file, var="-") # uncommented to not block automated tests
 str(nc$var)
 }
 }
 \seealso{
-\code{\link{readDWD}}
+\code{\link[=readDWD]{readDWD()}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Aug 2019

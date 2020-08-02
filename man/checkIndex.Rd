@@ -10,7 +10,9 @@ checkIndex(
   gindex = NULL,
   excludefp = TRUE,
   fast = FALSE,
-  warn = TRUE
+  warn = !quiet,
+  logfile = localtestdir(".", "misc/ExampleTests/warnings.txt"),
+  quiet = rdwdquiet()
 )
 }
 \arguments{
@@ -25,19 +27,25 @@ DEFAULT: TRUE}
 
 \item{fast}{Exclude the 3-minute location per ID check? DEFAULT: FALSE}
 
-\item{warn}{Warn about issues? DEFAULT: TRUE}
+\item{warn}{Warn about issues? DEFAULT: \code{!quiet} (TRUE)}
+
+\item{logfile}{File to copy log to, appended to existing content. NULL to suppress.
+DEFAULT: "misc/ExampleTests/warnings.txt"}
+
+\item{quiet}{Logical: Suppress progress messages?
+DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
 }
 \value{
-Charstring with issues (if any) to be printed with \code{cat()}.
+Charstring with issues (if any) to be printed with \code{\link[=cat]{cat()}}.
 }
 \description{
-check indexes. Mainly for internal usage in \code{\link{createIndex}}.
-             Not exported, so call it as rdwd:::checkIndex() if you want to
-             run tests yourself. Further test suggestions are welcome!
+check indexes. Mainly for internal usage in \code{\link[=createIndex]{createIndex()}}.
+Not exported, so call it as rdwd:::checkIndex() if you want to
+run tests yourself. Further test suggestions are welcome!
 }
 \examples{
 data(fileIndex) ; data(metaIndex) ; data(geoIndex)
-# ci <- checkIndex(findex=fileIndex, mindex=metaIndex, gindex=geoIndex)
+# ci <- rdwd:::checkIndex(findex=fileIndex, mindex=metaIndex, gindex=geoIndex)
 # cat(ci)
 }
 \seealso{

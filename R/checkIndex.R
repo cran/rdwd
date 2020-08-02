@@ -1,33 +1,50 @@
 #' @title check indexes
-#' @description check indexes. Mainly for internal usage in \code{\link{createIndex}}.
+#' @description check indexes. Mainly for internal usage in [createIndex()].
 #'              Not exported, so call it as rdwd:::checkIndex() if you want to
 #'              run tests yourself. Further test suggestions are welcome!
-#' @return Charstring with issues (if any) to be printed with \code{cat()}.
-#' @importFrom berryFunctions sortDF truncMessage round0
+#' @return Charstring with issues (if any) to be printed with [cat()].
+#' @importFrom berryFunctions truncMessage round0 traceCall
+#' @importFrom pbapply pbsapply
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, May 2019
-#' @seealso \code{\link{createIndex}}
-#' @examples 
+#' @seealso [`createIndex`]
+#' @examples
 #' data(fileIndex) ; data(metaIndex) ; data(geoIndex)
-#' # ci <- checkIndex(findex=fileIndex, mindex=metaIndex, gindex=geoIndex)
+#' # ci <- rdwd:::checkIndex(findex=fileIndex, mindex=metaIndex, gindex=geoIndex)
 #' # cat(ci)
-#' @param findex    \code{\link{fileIndex}}. DEFAULT: NULL
-#' @param mindex    \code{\link{metaIndex}}. DEFAULT: NULL
-#' @param gindex    \code{\link{geoIndex}}.  DEFAULT: NULL
+#' @param findex    [`fileIndex`]. DEFAULT: NULL
+#' @param mindex    [`metaIndex`]. DEFAULT: NULL
+#' @param gindex    [`geoIndex`].  DEFAULT: NULL
 #' @param excludefp Exclude false positives from geoIndex coordinate check results?
 #'                  DEFAULT: TRUE
 #' @param fast      Exclude the 3-minute location per ID check? DEFAULT: FALSE
-#' @param warn      Warn about issues? DEFAULT: TRUE
-checkIndex <- function(findex=NULL, mindex=NULL, gindex=NULL, excludefp=TRUE, fast=FALSE, warn=TRUE)
+#' @param warn      Warn about issues? DEFAULT: `!quiet` (TRUE)
+#' @param logfile   File to copy log to, appended to existing content. NULL to suppress.
+#'                  DEFAULT: "misc/ExampleTests/warnings.txt"
+#' @param quiet     Logical: Suppress progress messages?
+#'                  DEFAULT: FALSE through [rdwdquiet()]
+checkIndex <- function(
+  findex=NULL,
+  mindex=NULL,
+  gindex=NULL,
+  excludefp=TRUE,
+  fast=FALSE,
+  warn=!quiet,
+  logfile=localtestdir(".", "misc/ExampleTests/warnings.txt"),
+  quiet=rdwdquiet()
+  )
 {
 # helper function:
 alldupli <- function(x) duplicated(x) | duplicated(x, fromLast=TRUE)
 # Output text:
-out <- ""
+out <- paste0("\ncheckIndex results at ", as.character(Sys.time()), " for\n", dwdbase)
+itime <- file.mtime("data/fileIndex.rda")
+if(!is.na(itime)) out <- paste0(out, "\nFile 'data/fileIndex.rda' was last modified ", itime)
+out <- paste0(out, berryFunctions::traceCall(skip=1), "-------")
 
 # findex ----
 
 if(!is.null(findex)){
-message("Checking fileIndex...")
+if(!quiet) message("Checking fileIndex...")
 # check for duplicate files (DWD errors):
 duplifile <- findex[!grepl("minute",findex$res),] # 1min + 10min excluded
 duplifile <- duplifile[alldupli(duplifile[,1:4]),]
@@ -37,25 +54,34 @@ duplifile <- duplifile[duplifile$res!="subdaily" & duplifile$var!="standard_form
 if(nrow(duplifile)>0)
   {
   rvp <- paste(duplifile$res,duplifile$var,duplifile$per, sep="/")
-  per_folder <- lapply(unique(rvp), function(p) 
+  per_folder <- lapply(unique(rvp), function(p)
     {i <- unique(duplifile$id[rvp==p])
-    paste0("- ", round0(length(i), pre=4, flag=" "), " at ", p, "; ", 
-           truncMessage(i, ntrunc=10, prefix=""))
+    paste0("- ", berryFunctions::round0(length(i), pre=2, flag=" "), " at ", p, "; ",
+           berryFunctions::truncMessage(i, ntrunc=10, prefix=""))
     })
   per_folder <- paste(unlist(per_folder), collapse="\n")
   out <- c(out, "IDs with duplicate files:", per_folder)
   }
+
+# Duplicate meta files:
+duplifile <- findex[findex$ismeta &
+                    grepl("txt$", findex$path) &
+                    findex$res != "multi_annual",] # aktStandort + festerStandort
+duplifile$rvp <- paste(duplifile$res, duplifile$var, duplifile$per, sep="/")
+duplifile <- duplifile$path[alldupli(duplifile$rvp)]
+if(length(duplifile)>0)
+  out <- c(out, "Duplicate 'Beschreibung' files:", paste("-",duplifile))
 }
 
 
 # mindex ----
 
 if(!is.null(mindex)){
-message("Checking metaIndex...")
+if(!quiet) message("Checking metaIndex...")
 # helper function:
-newout <- function(out,ids,colcomp,column,textvar,unit="") 
+newout <- function(out,ids,colcomp,column,textvar,unit="")
  {
- new <- sapply(ids, function(i) 
+ new <- sapply(ids, function(i)
  {tt <- sort(table(mindex[colcomp==i,column]), decreasing=TRUE)
  unname(paste0("- ", textvar,"=",i, ": ", paste0(tt,"x",names(tt),unit, collapse=", ")))
  })
@@ -65,7 +91,7 @@ newout <- function(out,ids,colcomp,column,textvar,unit="")
 id_uni <- unique(mindex$Stations_id)
 # ID elevation inconsistencies:
 eletol <- 2.1 # m tolerance
-id_ele <- pbapply::pbsapply(id_uni, function(i) 
+id_ele <- pbapply::pbsapply(id_uni, function(i)
                  any(abs(diff(mindex[mindex$Stations_id==i,"Stationshoehe"]))>eletol))
 if(any(id_ele))
   {
@@ -76,18 +102,18 @@ if(any(id_ele))
 # several locations for one station ID:
 if(!fast){
 loctol <- 0.040 # km
-id_loc <- pbapply::pbsapply(id_uni, function(i) 
+id_loc <- pbapply::pbsapply(id_uni, function(i)
     maxlldist("geoBreite","geoLaenge", mindex[mindex$Stations_id==i,], each=FALSE)>loctol)
 mindex$coord <- paste(mindex$geoBreite, mindex$geoLaenge, sep="_")
 if(any(id_loc))
   {
   out <- c(out, paste0("Location differences >",loctol*1000,"m:"))
-  out <- newout(out, id_uni[id_loc], mindex$Stations_id, "coord", "ID") 
+  out <- newout(out, id_uni[id_loc], mindex$Stations_id, "coord", "ID")
   }
 }
 
 # Different names per ID:
-id_name <- pbapply::pbsapply(id_uni, function(i) 
+id_name <- pbapply::pbsapply(id_uni, function(i)
                   length(unique(mindex[mindex$Stations_id==i,"Stationsname"]))>1)
 if(any(id_name))
   {
@@ -97,7 +123,7 @@ if(any(id_name))
 
 # Different IDs per name:
 name_uni <- unique(mindex$Stationsname)
-name_id <- pbapply::pbsapply(name_uni, function(n) 
+name_id <- pbapply::pbsapply(name_uni, function(n)
                   length(unique(mindex[mindex$Stationsname==n,"Stations_id"]))>1)
 if(excludefp) name_id[name_uni=="Suderburg"] <- FALSE
 if(any(name_id))
@@ -113,7 +139,7 @@ if(any(name_id))
 
 # currently suppressed - too many differences to be meaningful!
 if(!is.null(findex) & !is.null(mindex) & FALSE){
-message("Comparing fileIndex and metaIndex date ranges...")
+if(!quiet) message("Comparing fileIndex and metaIndex date ranges...")
 
 findex$start <- as.Date(findex$start, "%Y%m%d")
 findex$end   <- as.Date(findex$end,   "%Y%m%d")
@@ -135,11 +161,11 @@ mf[mf$diff_bis < -30,]
 }
 
 
-  
+
 # gindex ----
 
 if(!is.null(gindex)){
-message("Checking geoIndex...")
+if(!quiet) message("Checking geoIndex...")
 columns <- !colnames(gindex) %in% c("display","col")
 # Duplicate coordinates checks:
 # Exclude known false positives like "Dasburg" vs "Dasburg (WWV RLP)"
@@ -162,8 +188,11 @@ if(anyDuplicated(coord))
 }
 
 # output stuff:
-if(any(out!="") & warn) warning("There are issues in the indexes, view them with cat.")
-out <- c(out, as.character(Sys.time()))
+logfileprint <- if(!is.null(logfile)) paste0("  openFile('",
+                  normalizePath(logfile,winslash="/", mustWork=FALSE),"')") else ""
+if(length(out)>2 & warn) warning("There are issues in the indexes.", logfileprint)
+out <- c(out, "\n")
 out <- paste(out, collapse="\n")
+if(!is.null(logfile)) cat(out, file=logfile, append=TRUE)
 return(invisible(out))
 } # end checkIndex

@@ -4,30 +4,39 @@
 \alias{readDWD.multia}
 \title{read multi_annual dwd data}
 \usage{
-readDWD.multia(file, fileEncoding = "latin1", comment.char = "\\032", ...)
+readDWD.multia(
+  file,
+  fileEncoding = "latin1",
+  comment.char = "\\032",
+  quiet = rdwdquiet(),
+  ...
+)
 }
 \arguments{
-\item{file}{Name of file on harddrive, like e.g. 
+\item{file}{Name of file on harddrive, like e.g.
 DWDdata/multi_annual_mean_81-10_Temperatur_1981-2010_aktStandort.txt or
 DWDdata/multi_annual_mean_81-10_Temperatur_1981-2010_Stationsliste_aktStandort.txt}
 
-\item{fileEncoding}{\link{read.table} \link{file} encoding.
+\item{fileEncoding}{\code{\link[=read.table]{read.table()}} file encoding.
 DEFAULT: "latin1" (needed on Linux, optional but not hurting on windows)}
 
-\item{comment.char}{\link{read.table} comment character.
-DEFAULT: "\\032" (needed 2019-04 to ignore the binary 
+\item{comment.char}{\code{\link[=read.table]{read.table()}} comment character.
+DEFAULT: "\\032" (needed 2019-04 to ignore the binary
 control character at the end of multi_annual files)}
 
-\item{\dots}{Further arguments passed to \code{\link{read.table}}}
+\item{quiet}{Suppress subfunction name message?
+DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
+
+\item{\dots}{Further arguments passed to \code{\link[=read.table]{read.table()}}}
 }
 \value{
 data.frame
 }
 \description{
-read multi_annual dwd data. 
-Intended to be called via \code{\link{readDWD}}.\cr
+read multi_annual dwd data.
+Intended to be called via \code{\link[=readDWD]{readDWD()}}.\cr
 All other observational data at \code{\link{dwdbase}} can be read
-with \code{\link{readDWD.data}}, except for the multi_annual and 
+with \code{\link[=readDWD.data]{readDWD.data()}}, except for the multi_annual and
 subdaily/standard_format data.
 }
 \examples{
@@ -44,7 +53,7 @@ head(ma_temp)
 head(ma_meta)
 
 ma <- merge(ma_meta, ma_temp, all=TRUE)
-berryFunctions::linReg(ma$Stationshoehe, ma$Jahr)
+berryFunctions::linReg(ma$Stationshoehe, ma$Jahr, main="annual average ~ elevation")
 op <- par(mfrow=c(3,4), mar=c(0.1,2,2,0), mgp=c(3,0.6,0))
 for(m in colnames(ma)[8:19])
   {
@@ -56,14 +65,14 @@ par(op)
 par(bg=8)
 berryFunctions::colPoints(ma$geogr..Laenge, ma$geogr..Breite, ma$Jahr, add=F, asp=1.4)
 
-data("DEU")
+load(system.file("extdata/DEU.rda", package="rdwd"))
 pdf("MultiAnn.pdf", width=8, height=10)
 par(bg=8)
 for(m in colnames(ma)[8:19])
   {
   raster::plot(DEU, border="darkgrey")
-  berryFunctions::colPoints(ma[-262,]$geogr..Laenge, ma[-262,]$geogr..Breite, ma[-262,m], 
-                            asp=1.4, # Range=range(ma[-262,8:19]), 
+  berryFunctions::colPoints(ma[-262,]$geogr..Laenge, ma[-262,]$geogr..Breite, ma[-262,m],
+                            asp=1.4, # Range=range(ma[-262,8:19]),
                             col=berryFunctions::divPal(200, rev=TRUE), zlab=m, add=T)
   }
 dev.off()
@@ -71,7 +80,7 @@ berryFunctions::openFile("MultiAnn.pdf")
 }
 }
 \seealso{
-\code{\link{readDWD}}
+\code{\link[=readDWD]{readDWD()}}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Feb 2019
