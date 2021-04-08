@@ -23,6 +23,7 @@ plotRadar(
   project = TRUE,
   proj = "radolan",
   extent = "radolan",
+  adjust05 = FALSE,
   targetproj = "ll",
   quiet = rdwdquiet(),
   ...
@@ -76,6 +77,8 @@ used only if \code{project=TRUE}. DEFAULT: "radolan"}
 \item{extent}{current extent, see \code{\link[=projectRasterDWD]{projectRasterDWD()}},
 used only if \code{project=TRUE}. DEFAULT: "radolan"}
 
+\item{adjust05}{Logical: Adjust extent by 0.5m to match edges? DEFAULT: FALSE}
+
 \item{targetproj}{target projection, see \code{\link[=projectRasterDWD]{projectRasterDWD()}},
 used only if \code{project=TRUE}. DEFAULT: "ll"}
 
@@ -122,7 +125,8 @@ berryFunctions::is.error(plotRadar(ncp1, layer=1:4, project=FALSE), TRUE, TRUE)
 
 }
 \seealso{
-\code{\link[=addBorders]{addBorders()}}, \code{\link[=readDWD]{readDWD()}}, \url{https://bookdown.org/brry/rdwd/raster-data.html}
+\code{\link[=projectRasterDWD]{projectRasterDWD()}}, \code{\link[=addBorders]{addBorders()}}, \code{\link[=readDWD]{readDWD()}},
+\href{https://bookdown.org/brry/rdwd/raster-data.html}{website raster chapter}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, Feb 2020

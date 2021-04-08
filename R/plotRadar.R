@@ -5,7 +5,8 @@
 #' If `length(layer)==1`, only that selected layer is returned.
 #' `output@@title` is set to `main`.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Feb 2020
-#' @seealso [addBorders()], [readDWD()], <https://bookdown.org/brry/rdwd/raster-data.html>
+#' @seealso [projectRasterDWD()], [addBorders()], [readDWD()],
+#'          [website raster chapter](https://bookdown.org/brry/rdwd/raster-data.html)
 #' @keywords aplot spatial
 #' @importFrom graphics box rect par title
 #' @importFrom berryFunctions seqPal
@@ -68,6 +69,7 @@
 #'                   used only if `project=TRUE`. DEFAULT: "radolan"
 #' @param extent     current extent, see [projectRasterDWD()],
 #'                   used only if `project=TRUE`. DEFAULT: "radolan"
+#' @param adjust05   Logical: Adjust extent by 0.5m to match edges? DEFAULT: FALSE
 #' @param targetproj target projection, see [projectRasterDWD()],
 #'                   used only if `project=TRUE`. DEFAULT: "ll"
 #' @param quiet      suppress progress messages? DEFAULT: FALSE through [rdwdquiet()]
@@ -92,6 +94,7 @@ keeppar=TRUE,
 project=TRUE,
 proj="radolan",
 extent="radolan",
+adjust05=FALSE,
 targetproj="ll",
 quiet=rdwdquiet(),
 ...
@@ -110,7 +113,7 @@ x@title <- as.character(main) # https://github.com/rspatial/raster/issues/128
 if(project)
  {
  if(!quiet) message("- projecting:")
- x <- projectRasterDWD(x, proj=proj,extent=extent,targetproj=targetproj,quiet=quiet)
+ x <- projectRasterDWD(x, proj=proj,extent=extent,adjust05=adjust05,targetproj=targetproj,quiet=quiet)
  }
 if(!quiet) message("- preparing plots...")
 # Extent:

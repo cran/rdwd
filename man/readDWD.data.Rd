@@ -20,8 +20,10 @@ DWDdata/daily_kl_recent_tageswerte_KL_03987_akt.zip}
 
 \item{fread}{Logical: read faster with \link[data.table:fread]{data.table::fread}?
 When reading many large historical files, speedup is significant.
-When called from \code{\link[=readDWD]{readDWD()}}, NA can also be used, which means
-TRUE if data.table is available.
+When called from \code{\link[=readDWD]{readDWD()}}, \code{fread=NA} can also be used, which means
+TRUE if R package \code{data.table} and system command \code{unzip} are available.
+Hint for Windows users: \code{unzip} comes with Rtools.
+See \url{https://bookdown.org/brry/rdwd/fread.html}
 DEFAULT: FALSE}
 
 \item{varnames}{Logical (vector): add a short description to the DWD variable
@@ -40,7 +42,7 @@ on the number of characters. DEFAULT: NA}
 "" is the current time zone, and "GMT" is UTC (Universal Time,
 Coordinated). DEFAULT: "GMT"}
 
-\item{quiet}{Suppress empty file warnings and subfuntion name message?
+\item{quiet}{Suppress empty file warnings?
 DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
 
 \item{\dots}{Further arguments passed to \code{\link[=read.table]{read.table()}} or \code{\link[data.table:fread]{data.table::fread()}}}

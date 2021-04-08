@@ -9,7 +9,9 @@
 #' @return data.frame of the desired dataset,
 #'         or a named list of data.frames if length(file) > 1.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jun 2018
-#' @seealso [dataDWD()], [readDWD()], [`dwdparams`], [newColumnNames()]
+#' @seealso [dataDWD()], [readDWD()], [`dwdparams`], [newColumnNames()]\cr
+#'          [readMeta()] for complete  `Metadaten_Parameter` file.\cr
+#'          [website use case](https://bookdown.org/brry/rdwd/use-case-get-all-hourly-rainfall-data-20142016.html#read-the-data)
 #' @keywords file
 #' @importFrom utils read.table unzip
 #' @importFrom berryFunctions checkFile na9 traceCall
@@ -22,6 +24,8 @@
 #' @param file    Char (vector): name(s) of the file(s) downloaded with [dataDWD()],
 #'                e.g. "~/DWDdata/tageswerte_KL_02575_akt.zip"
 #' @param params  data.frame: Parameter explanations. DEFAULT: [`dwdparams`]
+#' @param quiet   Suppress message about non-abbreviated parameters?
+#'                DEFAULT: FALSE through [rdwdquiet()]
 #' @param progbar Logical: present a progress bar with estimated remaining time?
 #'                If missing and length(file)==1, progbar is internally set to FALSE.
 #'                DEFAULT: TRUE
@@ -29,6 +33,7 @@
 readVars <- function(
 file,
 params=dwdparams,
+quiet=rdwdquiet(),
 progbar=TRUE
 )
 {
@@ -67,7 +72,7 @@ rownames(tab) <- NULL
 # Merge with short variable descriptions:
 tab2 <- merge(params, tab, all.y=TRUE)
 kurzna <- is.na(tab2$Kurz)
-if(any(kurzna)) warning(traceCall(3, "", ": "), "The following entries are not",
+if(any(kurzna) && !quiet) warning(traceCall(3, "", ": "), "The following entries are not",
                         " abbreviated yet: ", toString(tab2$Parameter[kurzna]),
                         "\nThis occurs in '", fn, "/Metadaten_Parameter*.txt'.",
                         "\nPlease inform berry-b@gmx.de so this can be included!\n",
@@ -105,6 +110,12 @@ return(output)
 
 # dwdparams --------------------------------------------------------------------
 
+# updateIndexes will add new rows with NA for Kurz in 'misc/params.txt'
+# Copy that to 'misc/params.xlsx', sheet 'input'.
+# Add the Kurz entries there manually.
+# Copy the 'output' sheet below here.
+# Remove the 0 0 row at the end.
+
 #' @title DWD parameter explanations
 #' @description Short German parameter explanations for the DWD abbreviations
 #' on the CDC FTP server.\cr
@@ -124,307 +135,179 @@ return(output)
 dwdparams <- unique(read.table(header=TRUE, strip.white=TRUE,
                                stringsAsFactors=FALSE, text="
 Parameter	Kurz
-JA_N	Bedeckungsgrad
-JA_N	Bedeckungsgrad
-MO_N	Bedeckungsgrad
-MO_N	Bedeckungsgrad
-N_TER	Bedeckungsgrad
-N_TER	Bedeckungsgrad
-NM	Bedeckungsgrad
-NM	Bedeckungsgrad
-V_N	Bedeckungsgrad
-V_N	Bedeckungsgrad
-V_N	Bedeckungsgrad
-V_N	Bedeckungsgrad
-V_S1_NS	Bedeckungsgrad_Schicht1
-V_S1_NS	Bedeckungsgrad_Schicht1
-V_S2_NS	Bedeckungsgrad_Schicht2
-V_S2_NS	Bedeckungsgrad_Schicht2
-V_S3_NS	Bedeckungsgrad_Schicht3
-V_S3_NS	Bedeckungsgrad_Schicht3
-V_S4_NS	Bedeckungsgrad_Schicht4
-V_S4_NS	Bedeckungsgrad_Schicht4
-VP_TER	Dampfdruck
-VP_TER	Dampfdruck
-VPM	Dampfdruck
-VPM	Dampfdruck
-E_TF_TER	Eisansatz
-E_TF_TER	Eisansatz
-V_TE002	Erdbodentemperatur_002cm
-V_TE002	Erdbodentemperatur_002cm
-V_TE002M	Erdbodentemperatur_002cm
-V_TE002M	Erdbodentemperatur_002cm
-V_TE005	Erdbodentemperatur_005cm
-V_TE005	Erdbodentemperatur_005cm
-V_TE005M	Erdbodentemperatur_005cm
-V_TE005M	Erdbodentemperatur_005cm
-V_TE010	Erdbodentemperatur_010cm
-V_TE010	Erdbodentemperatur_010cm
-V_TE010M	Erdbodentemperatur_010cm
-V_TE010M	Erdbodentemperatur_010cm
-V_TE020	Erdbodentemperatur_020cm
-V_TE020	Erdbodentemperatur_020cm
-V_TE020M	Erdbodentemperatur_020cm
-V_TE020M	Erdbodentemperatur_020cm
-V_TE050	Erdbodentemperatur_050cm
-V_TE050	Erdbodentemperatur_050cm
-V_TE050M	Erdbodentemperatur_050cm
-V_TE050M	Erdbodentemperatur_050cm
-V_TE100	Erdbodentemperatur_100cm
-V_TE100	Erdbodentemperatur_100cm
-EK_TER	Erdbodenzustand
-EK_TER	Erdbodenzustand
-TF_TER	Feuchttemperatur
-TF_TER	Feuchttemperatur
-PM	Luftdruck
-PM	Luftdruck
-PP_10	Luftdruck
-P	Luftdruck_NN
-P	Luftdruck_NN
-P0	Luftdruck_Stationshoehe
-P0	Luftdruck_Stationshoehe
-PP_TER	Luftdruck_Terminwert
-PP_TER	Luftdruck_Terminwert
-JA_TT	Lufttemperatur
-JA_TT	Lufttemperatur
-MO_TT	Lufttemperatur
-MO_TT	Lufttemperatur
-TMK	Lufttemperatur
-TMK	Lufttemperatur
-TT	Lufttemperatur
-TT	Lufttemperatur
-TT_10	Lufttemperatur
-TT_TU	Lufttemperatur
-TT_TU	Lufttemperatur
-TM5_10	Lufttemperatur_5cm
-TX5_10	Lufttemperatur_5cm_max
-TGK	Lufttemperatur_5cm_min
-TGK	Lufttemperatur_5cm_min
-TN5_10	Lufttemperatur_5cm_min
-JA_MX_TX	Lufttemperatur_AbsMax
-JA_MX_TX	Lufttemperatur_AbsMax
-MX_TX	Lufttemperatur_AbsMax
-MX_TX	Lufttemperatur_AbsMax
-JA_MX_TN	Lufttemperatur_AbsMin
-JA_MX_TN	Lufttemperatur_AbsMin
-MX_TN	Lufttemperatur_AbsMin
-MX_TN	Lufttemperatur_AbsMin
-JA_TX	Lufttemperatur_Max
-JA_TX	Lufttemperatur_Max
-MO_TX	Lufttemperatur_Max
-MO_TX	Lufttemperatur_Max
-TX_10	Lufttemperatur_Max
-TXK	Lufttemperatur_Max
-TXK	Lufttemperatur_Max
-JA_TN	Lufttemperatur_Min
-JA_TN	Lufttemperatur_Min
-MO_TN	Lufttemperatur_Min
-MO_TN	Lufttemperatur_Min
-TN_10	Lufttemperatur_Min
-TNK	Lufttemperatur_Min
-TNK	Lufttemperatur_Min
-TT_TER	Lufttemperatur_Terminwert
-TT_TER	Lufttemperatur_Terminwert
-RWS_DAU_10	Niederschlagsdauer
-RSF	Niederschlagsform
-RSF	Niederschlagsform
-RSKF	Niederschlagsform
-RSKF	Niederschlagsform
-WRTR	Niederschlagsform
-WRTR	Niederschlagsform
-JA_RR	Niederschlagshoehe
-JA_RR	Niederschlagshoehe
-JA_RR	Niederschlagshoehe
-JA_RR	Niederschlagshoehe
-MO_RR	Niederschlagshoehe
-MO_RR	Niederschlagshoehe
-MO_RR	Niederschlagshoehe
-MO_RR	Niederschlagshoehe
-R1	Niederschlagshoehe
-R1	Niederschlagshoehe
-RS	Niederschlagshoehe
-RS	Niederschlagshoehe
-RS_01	Niederschlagshoehe
-RSK	Niederschlagshoehe
-RSK	Niederschlagshoehe
-RWS_10	Niederschlagshoehe
-JA_MX_RS	Niederschlagshoehe_Max
-JA_MX_RS	Niederschlagshoehe_Max
-JA_MX_RS	Niederschlagshoehe_Max
-JA_MX_RS	Niederschlagshoehe_Max
-MX_RS	Niederschlagshoehe_Max
-MX_RS	Niederschlagshoehe_Max
-MX_RS	Niederschlagshoehe_Max
-MX_RS	Niederschlagshoehe_Max
-RTH_01	Niederschlagshoehe_Tropfen
-RWH_01	Niederschlagshoehe_Wippe
-RS_IND	Niederschlagsindikator
-RS_IND	Niederschlagsindikator
-RS_IND_01	Niederschlagsindikator
-RWS_IND_10	Niederschlagsindikator
-RF_10	Relative_Feuchte
-RF_TU	Relative_Feuchte
-RF_TU	Relative_Feuchte
-UPM	Relative_Feuchte
-UPM	Relative_Feuchte
-RF_TER	Relative_Feuchte_Terminwert
-RF_TER	Relative_Feuchte_Terminwert
-RF_TER	Relative_Feuchte_Terminwert
-RF_TER	Relative_Feuchte_Terminwert
-JA_SH_S	Schneehoehe
-JA_SH_S	Schneehoehe
-MO_SH_S	Schneehoehe
-MO_SH_S	Schneehoehe
-SH_TAG	Schneehoehe
-SH_TAG	Schneehoehe
-SH_TAG	Schneehoehe
-SH_TAG	Schneehoehe
-SHK_TAG	Schneehoehe
-SHK_TAG	Schneehoehe
+ABSF_STD	Absolute_Feuchte
 ASH_6	Schneehoehe_Ausstich
-ASH_6	Schneehoehe_Ausstich
-JA_NSH	Schneehoehe_Neu
-JA_NSH	Schneehoehe_Neu
-MO_NSH	Schneehoehe_Neu
-MO_NSH	Schneehoehe_Neu
-NSH_TAG	Schneehoehe_Neu
-NSH_TAG	Schneehoehe_Neu
-WAAS_6	Schneewasseraequivalent
-WAAS_6	Schneewasseraequivalent
-WASH_6	Schneewasseraequivalent_Gesamt
-WASH_6	Schneewasseraequivalent_Gesamt
-V_VV	Sichtweite
-V_VV	Sichtweite
-VK_TER	Sichtweite
-VK_TER	Sichtweite
-JA_SD_S	Sonnenscheindauer
-JA_SD_S	Sonnenscheindauer
-MO_SD_S	Sonnenscheindauer
-MO_SD_S	Sonnenscheindauer
-SD_10	Sonnenscheindauer
-SD_LBERG	Sonnenscheindauer
-SD_SO	Sonnenscheindauer
-SD_SO	Sonnenscheindauer
-SD_STRAHL	Sonnenscheindauer
-SDK	Sonnenscheindauer
-SDK	Sonnenscheindauer
 ATMO_LBERG	Strahlung_Atmospaere
 ATMO_STRAHL	Strahlung_Atmospaere
-GS_10	Strahlung_Global
-FG_LBERG	Strahlung_Global_kurzwellig
-FG_STRAHL	Strahlung_Global_kurzwellig
-DS_10	Strahlung_Himmel_diffus
-FD_LBERG	Strahlung_Himmel_diffus
-FD_STRAHL	Strahlung_Himmel_diffus
-LS_10	Strahlung_langwellig
-TD	Taupunkttemperatur
-TD	Taupunkttemperatur
-TD_10	Taupunkttemperatur
-F	Windgeschwindigkeit
-F	Windgeschwindigkeit
-FF	Windgeschwindigkeit
-FF	Windgeschwindigkeit
-FF_10	Windgeschwindigkeit
-FM	Windgeschwindigkeit
-FM	Windgeschwindigkeit
-FX_10	Windgeschwindigkeit_Max
-FMX_10	Windgeschwindigkeit_MaxMean
-FNX_10	Windgeschwindigkeit_Min
+CD_TER	Wolkendichte
 D	Windrichtung
 DD	Windrichtung
 DD_10	Windrichtung
 DK_TER	Windrichtung
-DK_TER	Windrichtung
+DS_10	Strahlung_Himmel_diffus
 DX_10	Windrichtung_Maxwind
-FX	Windspitze
-FX	Windspitze
-JA_MX_FX	Windspitze
-JA_MX_FX	Windspitze
-MX_FX	Windspitze
-MX_FX	Windspitze
+E_TF_TER	Eisansatz
+EK_TER	Erdbodenzustand
+F	Windgeschwindigkeit
+FD_LBERG	Strahlung_Himmel_diffus
+FD_STRAHL	Strahlung_Himmel_diffus
+FF	Windgeschwindigkeit
+FF_10	Windgeschwindigkeit
+FG_LBERG	Strahlung_Global_kurzwellig
+FG_STRAHL	Strahlung_Global_kurzwellig
 FK_TER	Windstaerke
-FK_TER	Windstaerke
-JA_FK	Windstaerke
-JA_FK	Windstaerke
-MO_FK	Windstaerke
-MO_FK	Windstaerke
-V_S1_CSA	Wolkenart_Abk_Schicht1
-V_S1_CSA	Wolkenart_Abk_Schicht1
-V_S2_CSA	Wolkenart_Abk_Schicht2
-V_S2_CSA	Wolkenart_Abk_Schicht2
-V_S3_CSA	Wolkenart_Abk_Schicht3
-V_S3_CSA	Wolkenart_Abk_Schicht3
-V_S4_CSA	Wolkenart_Abk_Schicht4
-V_S4_CSA	Wolkenart_Abk_Schicht4
-V_S1_CS	Wolkenart_Schicht1
-V_S1_CS	Wolkenart_Schicht1
-V_S2_CS	Wolkenart_Schicht2
-V_S2_CS	Wolkenart_Schicht2
-V_S3_CS	Wolkenart_Schicht3
-V_S3_CS	Wolkenart_Schicht3
-V_S4_CS	Wolkenart_Schicht4
-V_S4_CS	Wolkenart_Schicht4
-CD_TER	Wolkendichte
-CD_TER	Wolkendichte
-V_S1_HHS	Wolkenhoehe_Schicht1
-V_S1_HHS	Wolkenhoehe_Schicht1
-V_S2_HHS	Wolkenhoehe_Schicht2
-V_S2_HHS	Wolkenhoehe_Schicht2
-V_S3_HHS	Wolkenhoehe_Schicht3
-V_S3_HHS	Wolkenhoehe_Schicht3
-V_S4_HHS	Wolkenhoehe_Schicht4
-V_S4_HHS	Wolkenhoehe_Schicht4
-GEWITTER	Gewitter
+FM	Windgeschwindigkeit
+FMX_10	Windgeschwindigkeit_MaxMean
+FNX_10	Windgeschwindigkeit_Min
+FX	Windspitze
+FX_10	Windgeschwindigkeit_Max
+FX_911	Windspitze_Stunde1
+FX_911_3	Windspitze_Stunde3
+FX_911_6	Windspitze_Stunde6
 GEWITTER	Gewitter
 GLATTEIS	Glatteis
-GLATTEIS	Glatteis
 GRAUPEL	Graupel
-GRAUPEL	Graupel
+GS_10	Strahlung_Global
 HAGEL	Hagel
-HAGEL	Hagel
-JA_GEWITTER	Gewitter
+JA_FK	Windstaerke
 JA_GEWITTER	Gewitter
 JA_GLATTEIS	Glatteis
-JA_GLATTEIS	Glatteis
-JA_GRAUPEL	Graupel
 JA_GRAUPEL	Graupel
 JA_HAGEL	Hagel
-JA_HAGEL	Hagel
+JA_MX_FX	Windspitze
+JA_MX_RS	Niederschlagshoehe_Max
+JA_MX_TN	Lufttemperatur_AbsMin
+JA_MX_TX	Lufttemperatur_AbsMax
+JA_N	Bedeckungsgrad
 JA_NEBEL	Nebel
-JA_NEBEL	Nebel
-JA_STURM_6	Sturm_6Bft
+JA_NSH	Schneehoehe_Neu
+JA_RR	Niederschlagshoehe
+JA_SD_S	Sonnenscheindauer
+JA_SH_S	Schneehoehe
 JA_STURM_6	Sturm_6Bft
 JA_STURM_8	Sturm_8Bft
-JA_STURM_8	Sturm_8Bft
 JA_TAU	Tau
-JA_TAU	Tau
-MO_GEWITTER	Gewitter
+JA_TN	Lufttemperatur_Min
+JA_TT	Lufttemperatur
+JA_TX	Lufttemperatur_Max
+LS_10	Strahlung_langwellig
+MO_FK	Windstaerke
 MO_GEWITTER	Gewitter
 MO_GLATTEIS	Glatteis
-MO_GLATTEIS	Glatteis
-MO_GRAUPEL	Graupel
 MO_GRAUPEL	Graupel
 MO_HAGEL	Hagel
-MO_HAGEL	Hagel
+MO_N	Bedeckungsgrad
 MO_NEBEL	Nebel
-MO_NEBEL	Nebel
-MO_STURM_6	Sturm_6Bft
+MO_NSH	Schneehoehe_Neu
+MO_RR	Niederschlagshoehe
+MO_SD_S	Sonnenscheindauer
+MO_SH_S	Schneehoehe
 MO_STURM_6	Sturm_6Bft
 MO_STURM_8	Sturm_8Bft
-MO_STURM_8	Sturm_8Bft
 MO_TAU	Tau
-MO_TAU	Tau
+MO_TN	Lufttemperatur_Min
+MO_TT	Lufttemperatur
+MO_TX	Lufttemperatur_Max
+MX_FX	Windspitze
+MX_RS	Niederschlagshoehe_Max
+MX_TN	Lufttemperatur_AbsMin
+MX_TX	Lufttemperatur_AbsMax
+N_TER	Bedeckungsgrad
 NEBEL	Nebel
-NEBEL	Nebel
+NM	Bedeckungsgrad
+NSH_TAG	Schneehoehe_Neu
+P	Luftdruck_NN
+P_STD	Luftdruck
+P0	Luftdruck_Stationshoehe
+PM	Luftdruck
+PP_10	Luftdruck
+PP_TER	Luftdruck_Terminwert
+R1	Niederschlagshoehe
 REIF	Reif
-REIF	Reif
-STURM_6	Sturm_6Bft
-STURM_6	Sturm_6Bft
-STURM_8	Sturm_8Bft
-STURM_8	Sturm_8Bft
-TAU	Tau
-TAU	Tau
+RF_10	Relative_Feuchte
+RF_STD	Relative_Feuchte
+RF_TER	Relative_Feuchte_Terminwert
+RF_TU	Relative_Feuchte
+RS	Niederschlagshoehe
+RS_01	Niederschlagshoehe
+RS_IND	Niederschlagsindikator
+RS_IND_01	Niederschlagsindikator
+RSF	Niederschlagsform
+RSK	Niederschlagshoehe
+RSKF	Niederschlagsform
+RTH_01	Niederschlagshoehe_Tropfen
+RWH_01	Niederschlagshoehe_Wippe
+RWS_10	Niederschlagshoehe
+RWS_DAU_10	Niederschlagsdauer
+RWS_IND_10	Niederschlagsindikator
+SD_10	Sonnenscheindauer
+SD_LBERG	Sonnenscheindauer
+SD_SO	Sonnenscheindauer
+SD_STRAHL	Sonnenscheindauer
+SDK	Sonnenscheindauer
+SH_TAG	Schneehoehe
+SHK_TAG	Schneehoehe
 SLA_10	Windgeschwindigkeit_STABW_lat
 SLO_10	Windgeschwindigkeit_STABW_lon
+STURM_6	Sturm_6Bft
+STURM_8	Sturm_8Bft
+TAU	Tau
+TD	Taupunkttemperatur
+TD_10	Taupunkttemperatur
+TD_STD	Taupunkttemperatur
+TF_STD	Feuchttemperatur
+TF_TER	Feuchttemperatur
+TGK	Lufttemperatur_5cm_min
+TM5_10	Lufttemperatur_5cm
+TMK	Lufttemperatur
+TN_10	Lufttemperatur_Min
+TN5_10	Lufttemperatur_5cm_min
+TNK	Lufttemperatur_Min
+TT	Lufttemperatur
+TT_10	Lufttemperatur
+TT_STD	Lufttemperatur
+TT_TER	Lufttemperatur_Terminwert
+TT_TU	Lufttemperatur
+TX_10	Lufttemperatur_Max
+TX5_10	Lufttemperatur_5cm_max
+TXK	Lufttemperatur_Max
+UPM	Relative_Feuchte
+V_N	Bedeckungsgrad
+V_S1_CS	Wolkenart_Schicht1
+V_S1_CSA	Wolkenart_Abk_Schicht1
+V_S1_HHS	Wolkenhoehe_Schicht1
+V_S1_NS	Bedeckungsgrad_Schicht1
+V_S2_CS	Wolkenart_Schicht2
+V_S2_CSA	Wolkenart_Abk_Schicht2
+V_S2_HHS	Wolkenhoehe_Schicht2
+V_S2_NS	Bedeckungsgrad_Schicht2
+V_S3_CS	Wolkenart_Schicht3
+V_S3_CSA	Wolkenart_Abk_Schicht3
+V_S3_HHS	Wolkenhoehe_Schicht3
+V_S3_NS	Bedeckungsgrad_Schicht3
+V_S4_CS	Wolkenart_Schicht4
+V_S4_CSA	Wolkenart_Abk_Schicht4
+V_S4_HHS	Wolkenhoehe_Schicht4
+V_S4_NS	Bedeckungsgrad_Schicht4
+V_TE002	Erdbodentemperatur_002cm
+V_TE002M	Erdbodentemperatur_002cm
+V_TE005	Erdbodentemperatur_005cm
+V_TE005M	Erdbodentemperatur_005cm
+V_TE010	Erdbodentemperatur_010cm
+V_TE010M	Erdbodentemperatur_010cm
+V_TE020	Erdbodentemperatur_020cm
+V_TE020M	Erdbodentemperatur_020cm
+V_TE050	Erdbodentemperatur_050cm
+V_TE050M	Erdbodentemperatur_050cm
+V_TE100	Erdbodentemperatur_100cm
+V_VV	Sichtweite
+VK_TER	Sichtweite
+VP_STD	Dampfdruck
+VP_TER	Dampfdruck
+VPM	Dampfdruck
+WAAS_6	Schneewasseraequivalent
+WASH_6	Schneewasseraequivalent_Gesamt
+WRTR	Niederschlagsform
+WW	Beobachtung
 "))
 rownames(dwdparams) <- dwdparams$Parameter

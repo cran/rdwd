@@ -3,7 +3,8 @@
 #' @title add country and Bundesland borders to a map
 #' @return invisible list with DEU and EUR
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Aug 2019
-#' @seealso [`plotRadar`], [`DEU`], [`EUR`]
+#' @seealso [`plotRadar`], [`DEU`], [`EUR`],
+#'          [website raster chapter](https://bookdown.org/brry/rdwd/raster-data.html)
 #' @keywords aplot
 #' @importFrom utils globalVariables
 #' @export
@@ -45,12 +46,17 @@ if(getRversion() >= "2.15.1")  utils::globalVariables(c("DEU", "EUR"))
 #' `load(system.file("extdata/DEU.rda", package="rdwd"))`\cr\cr
 #' Obtained with the code: \cr
 #' ```
-#' DEU1 <- raster::getData("GADM", country="DEU", level=1)
-#' DEU <- rgeos::gSimplify(DEU1, tol=0.02, topologyPreserve=FALSE)
-#' raster::plot(DEU1)
-#' raster::plot(DEU)
-#' save(DEU,        file="inst/extdata/DEU.rda")
-#' tools::resaveRdaFiles("inst/extdata/DEU.rda")
+#' url <- "https://gisco-services.ec.europa.eu/distribution/v2/nuts/shp/NUTS_RG_03M_2021_4326_LEVL_1.shp.zip"
+#' tf <- tempfile(fileext=".zip")
+#' download.file(url, tf) # 0.9 MB
+#' unzip(tf, exdir="misc/vign") ; rm(url, tf)
+#' 
+#' DEU <- raster::shapefile("misc/vign/NUTS_RG_03M_2021_4326_LEVL_1.shp")
+#' DEU <- DEU[DEU$CNTR_CODE=="DE","NUTS_NAME"]
+#' raster::plot(DEU) ; axis(1, line=-1) ; axis(2, line=-1)
+#' 
+#' save(DEU,        file="inst/extdata/DEU.rda", version=2)
+#' tools::resaveRdaFiles("inst/extdata/DEU.rda", version=2)
 #' ```
 #' @docType data
 #' @format Formal class 'SpatialPolygons' (package "sp") with 4 slots
@@ -71,7 +77,8 @@ load(system.file("extdata/DEU.rda", package="rdwd"), envir=environment())
 #' Obtained with the code: \cr
 #' ```
 #' EUR <- rworldmap::getMap("low")
-#' EUR <- raster::crop(EUR, c(-5,25, 40,60))
+#' EUR <- raster::crop(EUR, c(-11,25, 40,60))
+#' raster::crs(EUR) <- raster::crs(DEU)
 #' raster::plot(EUR)
 #' save(EUR,        file="inst/extdata/EUR.rda", version=2)
 #' tools::resaveRdaFiles("inst/extdata/EUR.rda", version=2)

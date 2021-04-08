@@ -4,9 +4,9 @@
 `rdwd` is an [R](https://www.r-project.org/) package to select, download and read climate data from the 
 German Weather Service (Deutscher Wetterdienst, DWD).  
 The DWD provides thousands of datasets with weather observations online at 
-[opendata.dwd.de](https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate).  
+[opendata.dwd.de](https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/).  
 Since May 2019, `rdwd` also supports reading the Radolan (binary) raster data at 
-[grids_germany](https://opendata.dwd.de/climate_environment/CDC/grids_germany).
+[grids_germany](https://opendata.dwd.de/climate_environment/CDC/grids_germany/).
 
 `rdwd` is available on CRAN:
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version-last-release/rdwd)](https://cran.r-project.org/package=rdwd) 
@@ -14,10 +14,10 @@ Since May 2019, `rdwd` also supports reading the Radolan (binary) raster data at
 [![Rdoc](http://www.rdocumentation.org/badges/version/rdwd)](https://www.rdocumentation.org/packages/rdwd)
 !["rdwd dependencies"](https://tinyverse.netlify.com/badge/rdwd)
 
-It has been presented at [FOSDEM 2017](https://fosdem.org/2017/schedule/event/geo_weather/)
+It has been presented at [FOSDEM 2017](https://archive.fosdem.org/2017/schedule/event/geo_weather/)
 and [UseR!2017](https://user2017.sched.com/event/Axr3/rdwd-manage-german-weather-observations) in Brussels and [e-Rum2020](https://milano-r.github.io/erum2020program/lightning-talks.html#rdwd-r-interface-to-german-weather-service-data),
 featured in Rstudio's [data package list](https://rviews.rstudio.com/2017/02/17/january-new-data-packages) 
-and written about in [OSOR](https://joinup.ec.europa.eu/community/osor/news/study-german-weather-data-made-easy-rdwd).
+and written about in [OSOR](https://joinup.ec.europa.eu/collection/open-source-observatory-osor/news/study-german-weather-data).
 
 
 ### Documentation

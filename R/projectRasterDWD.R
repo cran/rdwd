@@ -13,10 +13,12 @@
 #'   [developmentNotes.R](https://github.com/brry/rdwd/blob/master/misc/developmentNotes.R)\cr\cr
 #' @return Raster object with projection and extent, invisible
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, May 2019
-#' @seealso `raster::`[`crs`][raster::crs] / [`extent`][raster::extent] /
+#' @seealso [plotRadar()]\cr
+#' `raster::`[`crs`][raster::crs] / [`extent`][raster::extent] /
 #' [`projectRaster`][raster::projectRaster]\cr
 #' `readDWD.`[`binary`][readDWD.binary] / [`raster`][readDWD.raster] /
-#'  [`asc`][readDWD.asc] / [`radar`][readDWD.radar] / [`nc`][readDWD.nc]
+#' [`asc`][readDWD.asc] / [`radar`][readDWD.radar] / [`nc`][readDWD.nc]\cr
+#' [website raster chapter](https://bookdown.org/brry/rdwd/raster-data.html)
 #' @keywords aplot
 #' @export
 #' @examples
@@ -32,6 +34,7 @@
 #'               Ignored if `proj=NULL`. Can be an extent object, 
 #'               a vector with 4 numbers, or "radolan" / "rw" / "seasonal" / "nc" with internal defaults.
 #'               DEFAULT: "radolan"
+#' @param adjust05 Logical: Adjust extent by 0.5m to match edges? DEFAULT: FALSE
 #' @param targetproj `r` is reprojected to this [raster::crs()]. 
 #'               Use NULL to not reproject (i.e. only set proj and extent).
 #'               DEFAULT: "ll" with internal default for lat-lon.
@@ -41,6 +44,7 @@ projectRasterDWD <- function(
 r,
 proj="radolan",
 extent="radolan",
+adjust05=FALSE,
 targetproj="ll",
 quiet=rdwdquiet()
 )
@@ -73,6 +77,7 @@ e_seasonal <- c(3280414.71163347, 3934414.71163347, 5237500.62890625, 6103500.62
 e_nc <- c(3667000, 4389000, 2242000, 3181000)
 if(is.character(extent))
   extent <- switch(extent, radolan=e_radolan, rw=e_rw, seasonal=e_seasonal, nc=e_nc)
+if(adjust05) extent <- extent - 0.5
 #
 # actually project:
 if(!quiet) message("Setting raster projection to ", proj, " ...")

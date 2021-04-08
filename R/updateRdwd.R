@@ -4,9 +4,9 @@
 #'         [remotes::install_github()] will be called.
 #' @return data.frame with version information
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Nov 2019
-#' @seealso [help()], [remotes::install_github()]
+#' @seealso [remotes::install_github()]
 #' @keywords file
-#' @importFrom utils packageDescription download.file
+#' @importFrom utils packageDescription download.file compareVersion
 #' @export
 #' @examples
 #' # updateRdwd()
@@ -39,12 +39,13 @@ Vsrc <- split(unname(Vsrc),colnames(Vsrc)) # transform matrix to list
 output <- data.frame(Version=c(Vinst$Version, Vsrc$Version),
                         Date=c(Vinst$Date,    Vsrc$Date))
 rownames(output) <- paste0(pack,"_",c("Locally_installed", "Github_latest"))
+if(anyNA(output$Date)) stop("Date field is missing, cannot be compared.")
 # install if outdated:
-doinst <-  Vsrc$Version > Vinst$Version   |   Vsrc$Date > Vinst$Date
+doinst <-  compareVersion(Vsrc$Version, Vinst$Version)==1   |   Vsrc$Date > Vinst$Date
 if(!doinst)
 {
 if(!quiet) message(pack, " is up to date, compared to github.com/",repo,
-         ". Version ", Vsrc$Version, " (", Vsrc$Date,")")
+         ". Version ", Vinst$Version, " (", Vinst$Date,")")
 return(invisible(output))
 }
 if(!quiet) message(pack, " local version ", Vinst$Version, " (", Vinst$Date,

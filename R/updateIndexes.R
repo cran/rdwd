@@ -26,6 +26,10 @@
 #' # 266'106 (2020-06-01)
 #' # 266'216 (2020-07-06)
 #' # 266'216 (2020-07-28)
+#' # 267'175 (2020-09-21)
+#' # 269'561 (2020-12-03)
+#' # 286'306 (2021-04-02)
+#' # 286'189 (2021-04-08)
 #' 
 #' # gridbase
 #' #  49'247 (2019-05-26)
@@ -39,6 +43,10 @@
 #' #  34'203 (2020-06-01)
 #' #  35'953 (2020-07-06)
 #' #  37'038 (2020-07-28)
+#' #  39'791 (2020-09-21)
+#' #  43'435 (2020-12-03)
+#' #  31'698 (2021-04-02)
+#' #  32'015 (2021-04-08)
 #' 
 #' @param dwdlocal Read "DWDdata/INDEX_of_DWD_.txt" instead of calling
 #'                 [indexFTP()]? DEFAULT: FALSE
@@ -129,7 +137,7 @@ messaget("Checking readVars parameter abbreviations...")
 urls <- selectDWD("Potsdam","","","", quiet=TRUE, mindex=metaIndex, findex=fileIndex)
 urls <- urls[!  (grepl("1*_minute", urls) & !grepl("meta_data", urls))     ]
 files <- dataDWD(urls, dir=localtestdir(), read=F)
-rv <- readVars(files)
+rv <- readVars(files, quiet=TRUE) # quiet, message through nkurzmissing
 #str(rv, max.level=1)
 k <- unlist(lapply(rv, function(x)x$Kurz))
 nkurzmissing <- sum(is.na(k))
@@ -144,16 +152,15 @@ rv_df <- berryFunctions::sortDF(rv_df, "Kurz", decreasing=FALSE)
 colnames(rv_df)[1] <- "Parameter"
 write.table(rv_df, "misc/params.txt", sep="\t", quote=F, row.names=F)
 message("- Copy content of 'misc/params.txt' to 'params.xlsx'.
-- Manually add'Kurz' entries.
-- Copy to dwdparams in R/readVars.R")
+- Manually add 'Kurz' entries.
+- Copy sheet 'output' to dwdparams in R/readVars.R")
 }
 #
 # check for duplicates:
-dupli <- rv[sapply(rv, function(x) sum(duplicated(x[,"Kurz"]))>0)]
-if(length(dupli)!=0) print(dupli)
-# check for new entries:
-new <- which(sapply(rv, function(x)any(!x$Par %in% dwdparams$Parameter)))
-if(length(new)!=0) print(new)
+dupli <- sapply(rv, function(x) sum(duplicated(x[,"Kurz"]))>0)
+if(any(dupli)) message("Duplicate Kurz entries in:\n-", 
+                       truncMessage(names(dupli)[dupli], prefix="", sep="\n- ", ntrunc=8))
+
 
 
 # Final messages ----

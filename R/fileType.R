@@ -27,6 +27,8 @@
 #' |    [nc][readDWD.nc]    | .nc.gz      | For netcdf files.
 #' |                        |             |
 #' |   [asc][readDWD.asc]   | .tar        | For a `file` containing asc files.
+#' |                        |             |
+#' | [grib2][readDWD.grib2] | .grib2.bz2  | For an nwp forecast `file`.
 #'               
 #' @return Character (vector)
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Jul 2020
@@ -47,6 +49,7 @@
 #' nc      daily_Project_TRY_humidity_RH_199509_daymean.nc.gz
 #' radar   radolan_recent_bin_raa01-rw_10000-1802020250-dwd---bin.gz
 #' asc     radolan_historical_asc_2018_RW-201809.tar
+#' grib2   ftp_weather_nwp_cosmo-d2_005_T_2M.grib2.bz2
 #' ")
 #' fileType(ft$filename)
 #' 
@@ -57,7 +60,7 @@
 #'
 fileType <- function(file)
 {
-out <- rep("", length(file))
+out <- rep("fileTypeError", length(file))
 out[grepl(          ".zip$", file)] <- "data"
 out[grepl(          ".txt$", file)] <- "meta"
 out[grepl(  "Standort.txt$", file)] <- "multia"
@@ -68,9 +71,10 @@ out[grepl(       ".tar.gz$", file)] <- "binary"
 out[grepl(       ".asc.gz$", file)] <- "raster"
 out[grepl(        ".nc.gz$", file)] <- "nc"
 out[grepl(          ".tar$", file)] <- "asc"
+out[grepl(    ".grib2.bz2$", file)] <- "grib2"
 
-if(any(out=="")) warning("fileType failed for the following file", 
-                         truncMessage(file[out==""], midfix=": "))
+if(any(out=="fileTypeError")) warning("fileType failed for the following file", 
+             truncMessage(file[out=="fileTypeError"], midfix=": "), call.=FALSE)
 
 return(out)
 }

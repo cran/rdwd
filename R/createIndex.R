@@ -12,7 +12,8 @@
 #' @return invisible data.frame (or if meta=TRUE, list with two data.frames)
 #' with a number of columns inferred from the paths. Each is also written to disc.
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Oct-Nov 2016, June 2017
-#' @seealso [indexFTP()], [updateIndexes()], [`index`], [selectDWD()]
+#' @seealso [indexFTP()], [updateIndexes()], [`index`], [selectDWD()],
+#'          [website index chapter](https://bookdown.org/brry/rdwd/fileindex.html)
 #' @keywords manip
 #' @importFrom berryFunctions l2df convertUmlaut newFilename sortDF traceCall seqPal
 #' @importFrom utils write.table
@@ -162,7 +163,7 @@ if(!isTRUE(meta)) return(invisible(fileIndex))
 # metaIndex --------------------------------------------------------------------
 # select Beschreibung_.txt files only:
 sel <- grepl('.txt$', fileIndex$path)
-sel <- sel & grepl("Beschreibung", fileIndex$path)
+sel <- sel & grepl("Beschreibung_Stationen", fileIndex$path)
 # sel <- sel & fileIndex$res != "subdaily" # has different columns
 #sel <- sel & fileIndex$res %in% c("monthly","daily","hourly")
 # manual correction March 2018 for duplicate description files:

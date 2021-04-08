@@ -8,6 +8,7 @@ projectRasterDWD(
   r,
   proj = "radolan",
   extent = "radolan",
+  adjust05 = FALSE,
   targetproj = "ll",
   quiet = rdwdquiet()
 )
@@ -26,6 +27,8 @@ DEFAULT: "radolan"}
 Ignored if \code{proj=NULL}. Can be an extent object,
 a vector with 4 numbers, or "radolan" / "rw" / "seasonal" / "nc" with internal defaults.
 DEFAULT: "radolan"}
+
+\item{adjust05}{Logical: Adjust extent by 0.5m to match edges? DEFAULT: FALSE}
 
 \item{targetproj}{\code{r} is reprojected to this \code{\link[raster:projection]{raster::crs()}}.
 Use NULL to not reproject (i.e. only set proj and extent).
@@ -56,10 +59,12 @@ as a starting point, I then refined the extent to a visual match, see
 # To be used after readDWD.binary etc
 }
 \seealso{
+\code{\link[=plotRadar]{plotRadar()}}\cr
 \verb{raster::}\code{\link[raster:projection]{crs}} / \code{\link[raster:extent]{extent}} /
 \code{\link[raster:projectRaster]{projectRaster}}\cr
 \code{readDWD.}\code{\link[=readDWD.binary]{binary}} / \code{\link[=readDWD.raster]{raster}} /
-\code{\link[=readDWD.asc]{asc}} / \code{\link[=readDWD.radar]{radar}} / \code{\link[=readDWD.nc]{nc}}
+\code{\link[=readDWD.asc]{asc}} / \code{\link[=readDWD.radar]{radar}} / \code{\link[=readDWD.nc]{nc}}\cr
+\href{https://bookdown.org/brry/rdwd/raster-data.html}{website raster chapter}
 }
 \author{
 Berry Boessenkool, \email{berry-b@gmx.de}, May 2019

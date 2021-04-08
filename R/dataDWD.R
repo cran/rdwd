@@ -88,11 +88,10 @@
 #' @param read   Logical: read the file(s) with [readDWD()]? If FALSE,
 #'               only download is performed and the filename(s) returned. DEFAULT: TRUE
 #' @param dbin   Logical: Download binary file, i.e. add `mode="wb"` to the
-#'               [download.file()] call? This is needed for .tar files
-#'               (see [readDWD.asc()]) and binary files like those at
-#'               [weather/radar/radolan](https://opendata.dwd.de/weather/radar/radolan/rw/).
-#'               This seems to be a CRLF issue on MS Windows.
-#'               DEFAULT: FALSE
+#'               [download.file()] call? 
+#'               See [Website](https://bookdown.org/brry/rdwd/raster-data.html#binary-file-errors) 
+#'               for details.
+#'               DEFAULT: TRUE
 #' @param dfargs Named list of additional arguments passed to [download.file()]
 #'               Note that mode="wb" is already passed if `dbin=TRUE`
 #' @param sleep  Number. If not 0, a random number of seconds between 0 and
@@ -123,7 +122,7 @@ dir="DWDdata",
 force=FALSE,
 overwrite=FALSE,
 read=TRUE,
-dbin=FALSE,
+dbin=TRUE,
 dfargs=NULL,
 sleep=0,
 progbar=!quiet,
@@ -221,7 +220,7 @@ if(any(iserror))
   msg2 <- berryFunctions::truncMessage(msg2, ntrunc=15, prefix="", midfix="", altnix="", sep="\n")
   if(any(substr(url[iserror], 1, 4) != "ftp:"))
      msg2 <- paste0(msg2, "\n- dataDWD needs urls starting with 'ftp://'. You can use joinbf=TRUE for relative links.")
-  if(grepl("cannot open URL", msg2))
+  if(grepl("cannot open URL", msg2) || grepl("Kann URL .* nicht", msg2))
      msg2 <- paste0(msg2, "\n- If files have been renamed on the DWD server, ",
                     "see   https://bookdown.org/brry/rdwd/fileindex.html")
   msg <- paste0(msg, msg2)
