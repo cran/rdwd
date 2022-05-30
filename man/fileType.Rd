@@ -23,9 +23,13 @@ Click on the \code{type} for the subfunction documentation, e.g. \link[=readDWD.
     \tab  \tab  \cr
    \link[=readDWD.meta]{meta} \tab .txt \tab For Beschreibung.txt files. For zip files containing station meta information, see \code{\link[=readMeta]{readMeta()}}. \cr
     \tab  \tab  \cr
-   \link[=readDWD.multia]{multia} \tab [SO] \tab [SO]: \code{file} ends with "Standort.txt". Overrides \code{meta}. \cr
+   \link[=readDWD.multia]{multia} \tab [SO] \tab [SO]: \code{file} ends with "Standort.txt" or contains multi_annual. Overrides \code{meta}. \cr
     \tab  \tab  \cr
    \link[=readDWD.stand]{stand} \tab [SF] \tab [SF]: \code{file} contains "standard_format". For subdaily/standard_format files. \cr
+    \tab  \tab  \cr
+   \link[=readDWD.deriv]{data} \tab .txt.gz \tab For data at /CDC/derived_germany/. \cr
+    \tab  \tab  \cr
+   \link[=readDWD.pdf]{pdf} \tab .pdf \tab only opens \code{file} in default viewer. \cr
     \tab  \tab  \cr
    ------- \tab  \tab  \cr
     \tab  \tab  \cr
@@ -39,6 +43,8 @@ Click on the \code{type} for the subfunction documentation, e.g. \link[=readDWD.
     \tab  \tab  \cr
    \link[=readDWD.asc]{asc} \tab .tar \tab For a \code{file} containing asc files. \cr
     \tab  \tab  \cr
+   \link[=readDWD.rklim]{rklim} \tab YW*.tar \tab For a \code{file} containing bin files. \cr
+    \tab  \tab  \cr
    \link[=readDWD.grib2]{grib2} \tab .grib2.bz2 \tab For an nwp forecast \code{file}. \cr
 }
 }
@@ -46,21 +52,28 @@ Click on the \code{type} for the subfunction documentation, e.g. \link[=readDWD.
 ft <- read.table(header=TRUE, stringsAsFactors=FALSE, text="
 type    filename
 data    daily_kl_recent_tageswerte_KL_03987_akt.zip
-stand   subdaily_standard_format_kl_10381_00_akt.txt
 meta    daily_kl_recent_KL_Tageswerte_Beschreibung_Stationen.txt
 multia  multi_annual_mean_81-10_Temperatur_1981-2010_aktStandort.txt
+multia  multi_annual_mean_81-10_Temperatur_1981-2010.txt
+stand   subdaily_standard_format_kl_10381_00_akt.txt
+deriv   derived_germany_soil_daily_historical_3987.txt.gz
+pdf     DESCRIPTION_obsgermany_climate_monthly_kl_historical_en.pdf
 
+radar   radolan_recent_bin_raa01-rw_10000-1802020250-dwd---bin.gz
 binary  daily_radolan_historical_bin_2017_SF201712.tar.gz
 raster  16_DJF_grids_germany_seasonal_air_temp_mean_188216.asc.gz
 nc      daily_Project_TRY_humidity_RH_199509_daymean.nc.gz
-radar   radolan_recent_bin_raa01-rw_10000-1802020250-dwd---bin.gz
 asc     radolan_historical_asc_2018_RW-201809.tar
+rklim   5_minutes_radolan_reproc_2017_002_bin_2020_YW2017.002_202006.tar
 grib2   ftp_weather_nwp_cosmo-d2_005_T_2M.grib2.bz2
 ")
 fileType(ft$filename)
 
 stopifnot(fileType(ft$filename)==ft$type)
-fileType("random_stuff.odt")
+berryFunctions::is.error(fileType("random_stuff.odt"), force=TRUE)
+
+stopifnot(validFileTypes \%in\% ft$type)
+stopifnot(ft$type \%in\% validFileTypes)
 
 }
 \seealso{

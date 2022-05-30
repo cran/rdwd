@@ -8,10 +8,11 @@
 #' Just write the following in your code and all subsequent calls will be quiet:\cr
 #' `options(rdwdquiet=TRUE)`
 #' @export
+#' @importFrom berryFunctions tstop
 rdwdquiet <- function()
 {
 cv <- getOption("rdwdquiet", default=FALSE) # current value
-if(!(isTRUE(cv)|isFALSE(cv))) stop("options('rdwdquiet') must be TRUE or FALSE, not '",
+if(!(isTRUE(cv)|isFALSE(cv))) tstop("options('rdwdquiet') must be TRUE or FALSE, not '",
                                  toString(cv), "'.")
 cv
 }
@@ -46,12 +47,12 @@ release_questions <- function() {
 #' @aliases gridbase
 #' @export
 #' @description base URLs to the DWD FTP Server\cr\cr
-#' **`dwdbase`**: observed climatic records at\cr
-#' <ftp://opendata.dwd.de/climate_environment/CDC/observations_germany/climate>\cr
+#' **`dwdbase`**: observed climatic records at ftp:// variant of\cr
+#' <https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/>\cr
 #' See [overview of available datasets](https://bookdown.org/brry/rdwd/available-datasets.html) 
 #' and [usage suggestions](https://bookdown.org/brry/rdwd/station-selection.html).\cr\cr\cr
-#' **`gridbase`**: spatially interpolated gridded data at\cr
-#' <ftp://opendata.dwd.de/climate_environment/CDC/grids_germany>\cr
+#' **`gridbase`**: spatially interpolated gridded data at ftp:// variant of\cr
+#' <https://opendata.dwd.de/climate_environment/CDC/grids_germany/>\cr
 #' See [usage suggestions](https://bookdown.org/brry/rdwd/raster-data.html)
 #' 
 dwdbase <- "ftp://opendata.dwd.de/climate_environment/CDC/observations_germany/climate"
@@ -72,7 +73,6 @@ gridbase <- "ftp://opendata.dwd.de/climate_environment/CDC/grids_germany"
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Feb 2017
 #' @seealso [`geoIndex`]
 #' @keywords character
-#' @importFrom berryFunctions removeSpace
 #' 
 #' @param x data.frame with colnames
 #' 
@@ -80,7 +80,7 @@ rowDisplay <- function(
 x
 )
 {
-perrow <- function(x) paste0("rdwd::metaInfo(id=",removeSpace(x[1]),")<br>",
+perrow <- function(x) paste0("rdwd::metaInfo(id=",trimws(x[1]),")<br>",
                              paste0(names(x)[-1], ": ", x[-1], collapse="<br>"))
 apply(x, MARGIN=1, perrow)
 }
@@ -104,7 +104,7 @@ apply(x, MARGIN=1, perrow)
 checkSuggestedPackage <- function(package, functionname)
 {
 available <- requireNamespace(package, quietly=TRUE)
-if(!available) stop("To use ",functionname, ", please first install ",
+if(!available) tstop("\nTo use ",functionname, ", please first install ",
                     package,":    install.packages('",package,"')", call.=FALSE)
 return(invisible(available))
 }

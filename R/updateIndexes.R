@@ -1,6 +1,7 @@
 #' @title update rdwd indexes
 #' @description This is meant to be called with getwd at the
-#'  rdwd package source code directory to update the indexes with one single call.
+#'  rdwd package source code directory to update the indexes with one single call.\cr
+#'  To use custom or current indexes, see <https://bookdown.org/brry/rdwd/fileindex.html>
 #' @return [checkIndex()] results
 #' @importFrom berryFunctions sortDF
 #' @importFrom tools resaveRdaFiles
@@ -30,6 +31,12 @@
 #' # 269'561 (2020-12-03)
 #' # 286'306 (2021-04-02)
 #' # 286'189 (2021-04-08)
+#' # 285'246 (2021-04-23)
+#' # 285'972 (2021-06-02)
+#' # 321'477 (2022-04-07)
+#' # 477'236 (2022-04-28) # 5_minutes files added
+#' # 482'907 (2022-04-29)
+#' # 497'190 (2022-05-13)
 #' 
 #' # gridbase
 #' #  49'247 (2019-05-26)
@@ -47,6 +54,12 @@
 #' #  43'435 (2020-12-03)
 #' #  31'698 (2021-04-02)
 #' #  32'015 (2021-04-08)
+#' #  32'736 (2021-04-23)
+#' #  34'708 (2021-06-02)
+#' #  34'854 (2022-04-07)
+#' #  35'874 (2022-04-28)
+#' #  35'937 (2022-04-29)
+#' #  36'630 (2022-05-13)
 #' 
 #' @param dwdlocal Read "DWDdata/INDEX_of_DWD_.txt" instead of calling
 #'                 [indexFTP()]? DEFAULT: FALSE
@@ -63,7 +76,7 @@ metaforce=NA
 {
 # get indexes ----
 
-if(!grepl("rdwd$", getwd())) stop("getwd must be in package root folder.", immediate.=TRUE)
+if(!grepl("rdwd$", getwd())) stop("getwd must be in package root folder.")
 begintime <- Sys.time()
 messaget <- function(...) message(format(Sys.time(), "%T - "), ...)
 # get filenames on FTP server:
@@ -135,8 +148,9 @@ tools::resaveRdaFiles( "data/formatIndex.rda", version=2)
 
 messaget("Checking readVars parameter abbreviations...")
 urls <- selectDWD("Potsdam","","","", quiet=TRUE, mindex=metaIndex, findex=fileIndex)
-urls <- urls[!  (grepl("1*_minute", urls) & !grepl("meta_data", urls))     ]
-files <- dataDWD(urls, dir=localtestdir(), read=F)
+urls <- urls[!grepl("meta_data", urls)]
+urls <- urls[!grepl("minute", urls)]
+files <- dataDWD(urls, dir=locdir(), read=FALSE)
 rv <- readVars(files, quiet=TRUE) # quiet, message through nkurzmissing
 #str(rv, max.level=1)
 k <- unlist(lapply(rv, function(x)x$Kurz))
@@ -150,7 +164,7 @@ rv_df$Quelle <- rep(substr(urls, 76, 1e3), sapply(rv, nrow))
 rv_df <- berryFunctions::sortDF(rv_df, "Par", decreasing=FALSE)
 rv_df <- berryFunctions::sortDF(rv_df, "Kurz", decreasing=FALSE)
 colnames(rv_df)[1] <- "Parameter"
-write.table(rv_df, "misc/params.txt", sep="\t", quote=F, row.names=F)
+write.table(rv_df, "misc/params.txt", sep="\t", quote=FALSE, row.names=FALSE)
 message("- Copy content of 'misc/params.txt' to 'params.xlsx'.
 - Manually add 'Kurz' entries.
 - Copy sheet 'output' to dwdparams in R/readVars.R")

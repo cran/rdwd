@@ -2,7 +2,7 @@
 #' 
 #' Create a list of all the files (in all subfolders) of an FTP server.
 #' Defaults to the German Weather Service (DWD, Deutscher WetterDienst) OpenData server at
-#' <ftp://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/>.\cr
+#' <https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/>.\cr
 #' The R package `RCurl` must be available to do this.\cr\cr
 #' It's not suggested to run this for all folders, as it can take quite some time
 #' and you may get kicked off the FTP-Server. This package contains an index
@@ -33,7 +33,7 @@
 #' @importFrom stats runif
 #' @importFrom pbapply pblapply
 #' @importFrom utils write.table read.table
-#' @importFrom berryFunctions removeSpace traceCall newFilename truncMessage
+#' @importFrom berryFunctions twarning tstop newFilename truncMessage
 #' @export
 #' @examples
 #' \dontrun{ ## Needs internet connection
@@ -49,7 +49,7 @@
 #'                If `folder` is "currentfindex" (the default) and `base`
 #'                is the default, `folder` is changed to all observational
 #'                folders listed in the current tree file at
-#'                <ftp://opendata.dwd.de/weather/tree.html>. With "currentgindex"
+#'                <https://opendata.dwd.de/weather/tree.html>. With "currentgindex"
 #'                and `gridbase`, the grid folders in the tree are used.
 #'                DEFAULT: "currentfindex"
 #' @param base    Main directory of FTP server. Trailing slashes will be removed.
@@ -98,7 +98,7 @@ verbose=FALSE
 {
 # Check if RCurl is available:
 checkSuggestedPackage("RCurl", "rdwd::indexFTP")
-if(grepl("^https", base)) warning("base should start with ftp://, not https://. base value is: ",base)
+if(grepl("^https", base)) tstop("base should start with ftp://, not https://. base value is: ",base)
 # change folder:
 if(all(folder %in% c("currentfindex","currentgindex")) & base %in% c(dwdbase, gridbase))
   {
@@ -125,7 +125,7 @@ if(all(folder %in% c("currentfindex","currentgindex")) & base %in% c(dwdbase, gr
   }
 if(!quiet) message("Determining the content of the ",length(folder)," folder(s)...")
 if(base!=dwdbase)
- if(missing(folder)) warning('base is not the rdwd default. It is likely you want',
+ if(missing(folder)) twarning('base is not the rdwd default. It is likely you want',
                              ' to use folder="" instead of "',folder,'".')
 # Progress bar?
 if(progbar) lapply <- pbapply::pblapply
@@ -154,15 +154,13 @@ getURL_ffe <- function(ff_row)
     {
      # Prepare warning message text:
      p <- gsub("Error in function (type, msg, asError = TRUE)  : ", "", p, fixed=TRUE)
-     p <- removeSpace(gsub("\n", "", p))
+     p <- trimws(gsub("\n", "", p))
      if(grepl("Could not resolve host", p))
        p <- paste0(p,"\nThis may mean you are not connected to the internet.")
      if(grepl("Server denied you to change to the given directory", p))
        p <- paste0(p,"\nThis could mean the path is a file, not a folder",
                    " or that it doesn't exist at base\n", base)
-     msg <- paste0(traceCall(3, "", ": "), "RCurl::getURL failed for '",
-                   ff_row$path, "/' with error:\n - ", p)
-     warning(msg, call.=FALSE)
+     twarning("RCurl::getURL failed for '", ff_row$path, "/' with error:\n - ", p)
      assign("stoppp_ffe", TRUE, inherits=TRUE) # to get out of the loop sans error
      return(ff_row) # exit getURL_ffe
     }
@@ -177,7 +175,7 @@ getURL_ffe <- function(ff_row)
    p[ilf] <- sub(" -> .*", "", p[ilf]) # to keep p suited for read.text
  #
  isdir <- substr(p,1,1) =="d" # directory, else file
- pnames <- read.table(text=p, stringsAsFactors=FALSE)
+ pnames <- read.table(text=p, colClasses="character") # do not convert "00" folder to 0
  pnames <- pnames[,ncol(pnames)] # only use last column with path names
  output <- data.frame(path=paste0(ff_row$path,"/",pnames), isfile=!isdir, stringsAsFactors=FALSE)
  #
@@ -199,7 +197,7 @@ while(any(!df_ff$isfile))           # potential ToDo: exclude previously checked
   if(stoppp_ffe) break
   } # end while loop
 
-if(anyDuplicated(df_ff$path)) warning("Duplicate paths:",
+if(anyDuplicated(df_ff$path)) twarning("Duplicate paths:",
                    truncMessage(df_ff$path[duplicated(df_ff$path)], prefix=""))
 
 # sort final results alphabetically (path only, no f/f info):

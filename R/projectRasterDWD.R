@@ -21,6 +21,7 @@
 #' [website raster chapter](https://bookdown.org/brry/rdwd/raster-data.html)
 #' @keywords aplot
 #' @export
+#' @importFrom berryFunctions tstop
 #' @examples
 #' # To be used after readDWD.binary etc
 #' @param r      Raster object
@@ -49,6 +50,9 @@ targetproj="ll",
 quiet=rdwdquiet()
 )
 {
+# input check
+if(is.null(r)) tstop("r is NULL. Make sure you select the raster part properly.")
+if(identical(names(r),c("dat","meta"))) tstop("projectRasterDWD needs the 'dat' element as input.")
 # package check
 checkSuggestedPackage("raster", "rdwd::projectRasterDWD")
 #
@@ -57,7 +61,7 @@ if(!is.null(proj))
 {
 # Default projection and extent:
 # Projection as per Kompositbeschreibung 1.5
-# ftp://opendata.dwd.de/climate_environment/CDC/grids_germany/seasonal/air_temperature_max/BESCHREIBUNG_gridsgermany_seasonal_air_temperature_max_de.pdf
+# https://opendata.dwd.de/climate_environment/CDC/grids_germany/seasonal/air_temperature_max/BESCHREIBUNG_gridsgermany_seasonal_air_temperature_max_de.pdf
 # https://spatialreference.org/ref/epsg/31467/
 p_radolan <- "+proj=stere +lat_0=90 +lat_ts=90 +lon_0=10 +k=0.93301270189
               +x_0=0 +y_0=0 +a=6370040 +b=6370040 +to_meter=1000 +no_defs"

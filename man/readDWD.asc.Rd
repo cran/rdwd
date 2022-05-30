@@ -24,7 +24,7 @@ Must have been downloaded with \code{mode="wb"}!}
 will not be untarred again, saving up to 15 secs per file.
 DEFAULT: NULL (subfolder of \code{\link[=tempdir]{tempdir()}})}
 
-\item{dividebyten}{Divide numerical values by 10?
+\item{dividebyten}{Divide numerical values by 10? See \link{readDWD}.
 If dividebyten=FALSE and exdir left at NULL (tempdir), save
 the result on disc with \code{\link[raster:writeRaster]{raster::writeRaster()}}.
 Accessing out-of-memory raster objects won't work if
@@ -57,7 +57,7 @@ To project the data, use \code{\link[=projectRasterDWD]{projectRasterDWD()}}
 \dontrun{ # Excluded from CRAN checks, but run in localtests
 
 # File selection and download:
-datadir <- localtestdir()
+datadir <- locdir()
 radbase <- paste0(gridbase,"/hourly/radolan/historical/asc/")
 radfile <- "2018/RW-201809.tar" # 25 MB to download
 file <- dataDWD(radfile, base=radbase, joinbf=TRUE, dir=datadir,

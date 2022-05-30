@@ -15,14 +15,12 @@ DWDdata/grids_germany/seasonal/air_temperature_mean/
 The internal defaults are: \code{remove=FALSE} (recommended to
 keep this so \code{file} does not get deleted) and \code{skip=TRUE}
 (which reads previously unzipped files as is).
-If \code{file} has changed, you might want to use
-\code{gargs=list(skip=FALSE, overwrite=TRUE)}
-or alternatively \code{gargs=list(temporary=TRUE)}.
+If \code{file} has changed, use \code{gargs=list(temporary=TRUE)}.
 The \code{gunzip} default \code{destname} means that the
 unzipped file is stored at the same path as \code{file}.
 DEFAULT gargs: NULL}
 
-\item{dividebyten}{Logical: Divide the numerical values by 10?
+\item{dividebyten}{Logical: Divide the numerical values by 10? See \link{readDWD}.
 DEFAULT: TRUE}
 
 \item{quiet}{Ignored.
@@ -44,7 +42,7 @@ Note that \code{R.utils} must be installed to unzip the .asc.gz files.
 rasterbase <- paste0(gridbase,"/seasonal/air_temperature_mean")
 ftp.files <- indexFTP("/16_DJF", base=rasterbase, dir=tempdir())
 localfiles <- dataDWD(ftp.files[1:2], base=rasterbase, joinbf=TRUE,
-                      dir=localtestdir(), read=FALSE)
+                      dir=locdir(), read=FALSE)
 rf <- readDWD(localfiles[1])
 rf <- readDWD(localfiles[1]) # runs faster at second time due to skip=TRUE
 raster::plot(rf)

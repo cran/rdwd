@@ -15,7 +15,7 @@
 #' @seealso [indexFTP()], [updateIndexes()], [`index`], [selectDWD()],
 #'          [website index chapter](https://bookdown.org/brry/rdwd/fileindex.html)
 #' @keywords manip
-#' @importFrom berryFunctions l2df convertUmlaut newFilename sortDF traceCall seqPal
+#' @importFrom berryFunctions l2df convertUmlaut newFilename sortDF tstop twarning seqPal
 #' @importFrom utils write.table
 #' @importFrom pbapply pbsapply pblapply
 #' @importFrom graphics abline
@@ -29,6 +29,9 @@
 #' link3 <- "daily/kl/recent/KL_Tageswerte_Beschreibung_Stationen.txt"
 #' ind2 <- createIndex(c(link,link2,link3), dir=tempdir(), meta=TRUE, checkwarn=FALSE)
 #' lapply(ind2, head)
+#' link4 <- "1_minute/precipitation/meta_data/Meta_Daten_ein_min_rr_00755.zip"
+#' ind <- createIndex(link4, dir=tempdir())
+#' ind
 #' }
 #' 
 #' @param paths Char: vector of DWD paths returned by [indexFTP()] called
@@ -94,8 +97,7 @@ ncolumns <- 4 + any1min # supposed number of columns: 4, 5 if any prec1min in pa
 if(!quiet) messaget("Splitting filenames...")
 fileIndex <- berryFunctions::l2df(pbapply::pblapply(fileIndex,function(x) strsplit(x,"/")[[1]]))
 # check if there are actually 4/5 columns (might be different with non-standard base)
-if(ncol(fileIndex)!=ncolumns) stop(berryFunctions::traceCall(1, "in ", ": "),
-    "index does not have ", ncolumns," columns, but ", ncol(fileIndex), call.=FALSE)
+if(ncol(fileIndex)!=ncolumns) tstop("index does not have ", ncolumns," columns, but ", ncol(fileIndex))
 if(any1min) fileIndex[prec1min,4] <- fileIndex[prec1min,5]
 colnames(fileIndex) <- c("res","var","per","file",if(any1min) "dummyfromyear1minute")
 file <- fileIndex$file
@@ -116,6 +118,7 @@ id <- ifelse(zip & per=="now"              , info[,3], id)
 id <- ifelse(zip & sol & per!="historical" , info[,3], id) # var==solar
 id <- ifelse(zip & per=="meta_data"        , info[,2], id)
 id <- ifelse(substr(file,1,2)=="kl", substr(file,4,8), id) # res==subdaily
+id <- ifelse(info[,1]=="gz"&info[,2]=="txt", info[,3], id) # /CDC/derived_germany/soil/daily/historical/ 
 fileIndex$id <- suppressWarnings(as.integer(id))
 rm(id, per, sol, zip)
 #
@@ -141,8 +144,10 @@ fileIndex$end <- as.Date(fileIndex$end, "%Y%m%d")
 ma <- fileIndex$res=="multi_annual"
 ismeta1 <- !ma & grepl('.txt$', paths) & grepl("Beschreibung", paths)
 ismeta2 <-  ma & grepl("Stationsliste", paths)
-fileIndex$ismeta <- ismeta1 | ismeta2 | grepl('.pdf$', paths) | grepl('.html$', paths)
-rm(ma, ismeta1, ismeta2)
+ismeta3 <- grepl("meta_data/Meta_Daten", paths)
+ismeta4 <- grepl('.pdf$', paths) | grepl('.html$', paths)
+fileIndex$ismeta <- ismeta1 | ismeta2 | ismeta3 | ismeta4
+rm(ma, ismeta1, ismeta2, ismeta3, ismeta4)
 #
 # Append path for accurate file reading later on, e.g. with dataDWD:
 fileIndex$path <- paths
@@ -170,9 +175,7 @@ sel <- sel & grepl("Beschreibung_Stationen", fileIndex$path)
 #descdupli <- basename(paths)=="ein_min_rr_Beschreibung_Stationen.txt" & grepl("/20", dirname(paths))
 #sel <- sel & !descdupli
 
-if(sum(sel)<2) stop(berryFunctions::traceCall(1, "in ", ": "),
-              "There need to be at least two 'Beschreibung' files. (There is ",
-              sum(sel),")", call.=FALSE)
+if(sum(sel)<2) tstop("There need to be at least two 'Beschreibung' files. (There is ",sum(sel),")")
 # download and read those files:
 metas <- dataDWD(fileIndex[sel, "path"], base=base, joinbf=TRUE, dir=metadir,
                  overwrite=overwrite, read=FALSE, ...)
@@ -187,9 +190,9 @@ for(i in seq_along(metas))
 # check if all files have the same column names:
 cnames <- lapply(metas, colnames)
 sapply(2:length(cnames), function(i) if(!all(cnames[[i]] == cnames[[1]]))
-    warning(berryFunctions::traceCall(1, "in ", ": "), "The file ", fileIndex[sel, "path"][i],
+    twarning("The file ", fileIndex[sel, "path"][i],
          "\nhas incorrect column names: ", toString(cnames[[i]]),
-         "\n instead of \n", toString(cnames[[1]]), call.=FALSE))
+         "\n instead of \n", toString(cnames[[1]]), skip=2))
 #
 # merge:
 if(!quiet) messaget("Merging meta files...")

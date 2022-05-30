@@ -10,9 +10,10 @@ dataDWD(
   joinbf = FALSE,
   dir = "DWDdata",
   force = FALSE,
-  overwrite = FALSE,
+  overwrite = !isFALSE(force),
   read = TRUE,
   dbin = TRUE,
+  method = getOption("download.file.method"),
   dfargs = NULL,
   sleep = 0,
   progbar = !quiet,
@@ -40,12 +41,12 @@ Created if not existent. DEFAULT: "DWDdata" at current \code{\link[=getwd]{getwd
 \item{force}{Logical (vector): always download, even if the file already exists in \code{dir}?
 Use NA to force re-downloading files older than 24 hours.
 Use a numerical value to force after that amount of hours.
-Note: if \code{force!=FALSE}, you might want to set \code{overwrite=TRUE} as well.
-If \code{force=FALSE}, the file is still read (or name returned).
+Note: if \code{force} is not FALSE, the \code{overwrite} default is TRUE.
 DEFAULT: FALSE}
 
 \item{overwrite}{Logical (vector): if force=TRUE, overwrite the existing file
-rather than append "_1"/"_2" etc to the filename? DEFAULT: FALSE}
+rather than append "_1"/"_2" etc to the filename?
+DEFAULT: \code{!isFALSE(force)}, i.e. true when \code{force} is specified.}
 
 \item{read}{Logical: read the file(s) with \code{\link[=readDWD]{readDWD()}}? If FALSE,
 only download is performed and the filename(s) returned. DEFAULT: TRUE}
@@ -55,6 +56,10 @@ only download is performed and the filename(s) returned. DEFAULT: TRUE}
 See \href{https://bookdown.org/brry/rdwd/raster-data.html#binary-file-errors}{Website}
 for details.
 DEFAULT: TRUE}
+
+\item{method}{\link{download.file} \code{method}. Introduced in version 1.5.25 (2022-05-12)
+as triggered by \url{https://github.com/brry/rdwd/issues/34}.
+DEFAULT: \code{getOption("download.file.method")}}
 
 \item{dfargs}{Named list of additional arguments passed to \code{\link[=download.file]{download.file()}}
 Note that mode="wb" is already passed if \code{dbin=TRUE}}
@@ -110,7 +115,7 @@ To solve "errors in download.file: cannot open URL", see
 # find FTP files for a given station name and file path:
 link <- selectDWD("Fuerstenzell", res="hourly", var="wind", per="recent")
 # download file:
-fname <- dataDWD(link, dir=tempdir(), read=FALSE) ; fname
+fname <- dataDWD(link, dir=locdir(), read=FALSE) ; fname
 # dir="DWDdata" is the default directory to store files
 # unless force=TRUE, already obtained files will not be downloaded again
 
@@ -126,7 +131,7 @@ berryFunctions::monthAxis(1)
 
 # current and historical files:
 link <- selectDWD("Potsdam", res="daily", var="kl", per="hr"); link
-potsdam <- dataDWD(link, dir=tempdir())
+potsdam <- dataDWD(link, dir=locdir())
 potsdam <- do.call(rbind, potsdam) # this will partly overlap in time
 plot(TMK~MESS_DATUM, data=tail(potsdam,1500), type="l")
 # The straight line marks the jump back in time

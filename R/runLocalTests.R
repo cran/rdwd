@@ -3,7 +3,7 @@
 #' data downloads, these tests are not run automatically on CRAN.
 #' @return Time taken to run tests in minutes
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Apr-Oct 2019
-#' @seealso [localtestdir()]
+#' @seealso [locdir()]
 #' @keywords debugging
 #' @importFrom grDevices dev.off pdf
 #' @importFrom graphics par title
@@ -11,8 +11,8 @@
 #' @export
 #' 
 #' @param dir_data  Reusable data location. Preferably not under version control.
-#'                  DEFAULT: [localtestdir()]
-#' @param dir_exmpl Reusable example location. DEFAULT: localtestdir(folder="misc/ExampleTests")
+#'                  DEFAULT: [locdir()]
+#' @param dir_exmpl Reusable example location. DEFAULT: local directory
 #' @param fast      Exclude many tests? DEFAULT: FALSE
 #' @param devcheck  Run `devtools::check()`? DEFAULT: !fast
 #' @param radar     Test reading radar example files. DEFAULT: !fast
@@ -25,8 +25,8 @@
 #' @param quiet Suppress progress messages? DEFAULT: FALSE through [rdwdquiet()]
 #' 
 runLocalTests <- function(
-dir_data=localtestdir(),
-dir_exmpl=localtestdir(folder="misc/ExampleTests"),
+dir_data=locdir(),
+dir_exmpl=berryFunctions::packagePath(file="misc/ExampleTests"),
 fast=FALSE,              # ca 0.1 minutes (always, even if fast=T)
 devcheck=!fast,          # ca 1.0 minutes
 radar=!fast,             # ca 0.3 minutes
@@ -57,7 +57,6 @@ link <- selectDWD("Potsdam", res="daily", var="kl", per="recent")
 file <- dataDWD(link, read=FALSE, dir=dir_data, quiet=TRUE)
 testthat::expect_equal(basename(file), "daily_kl_recent_tageswerte_KL_03987_akt.zip")
 links <- selectDWD(id=c(5302,5711,3987),res="daily",var="more_precip",per="h")
-testthat::expect_error(dataDWD(links, dir=dir_data), "url must be a vector, not a list")
 testthat::expect_warning(dataDWD("multi/mean/Temp.txt", quiet=TRUE),
                "dataDWD needs urls starting with 'ftp://'.")
 f <- paste0(dwdbase, "/daily/kl/historical/tageswerte_KL_03987_18930101_20181231_hist.zip")
@@ -94,9 +93,10 @@ testthat::expect_equal(time_diff, rep(10,9))
 testthat::test_that("readDWD messages subfunctions correctly", {
 link <- c(selectDWD("Potsdam", res="daily", var="kl", per="hr"),
           selectDWD("", "daily", "kl", "h", meta=TRUE))
+link <- link[!grepl("mn4_Beschreibung",link)] # mn4 file with only 2 Berlin stations, Apr 2022
 file <- dataDWD(link, read=FALSE, dir=dir_data, progbar=FALSE)
 testthat::expect_message(readDWD(file, progbar=FALSE), 
-  "Reading 3 files with readDWD.data (2) / readDWD.meta (1) and fread=TRUE ...", fixed=TRUE)
+  "Reading 5 files with readDWD.data (2) / readDWD.meta (1) / readDWD.pdf (2) and fread=TRUE ...", fixed=TRUE)
 })
 
 
@@ -112,7 +112,7 @@ testthat::test_that("readRadarFile works", {
 trr <- function(file, ext="radolan", readdwd=FALSE) # trr: test reading radar data
   {
   main <- deparse(substitute(file))
-  file2 <- localtestdir(folder="misc", file=file)
+  file2 <- berryFunctions::packagePath(file=paste0("misc/",file))
   rrf <- if(readdwd) readDWD(file2, toraster=FALSE) else dwdradar::readRadarFile(file2)
   rrr <- raster::raster(rrf$dat)
   rrp <- projectRasterDWD(rrr, extent=ext)
@@ -154,11 +154,12 @@ rangecheck <- function(rr, orig, proj, tolerance=0.01)
   rc(rr$range_orig, orig, "Range (unprojected)")
   rc(rr$range_proj, proj, "Range (projected)")
   }
-rangecheck(w1, c( 0.0,  6.2), c( 0.00,  5.87))
-rangecheck(w2, c( 0.0, 72.6), c(-0.19, 70.98))
-rangecheck(rw, c( 0.0, 30.7), c(-0.45, 30.45))
-rangecheck(sf, c( 0.0, 39.2), c(-0.03, 38.20))
-rangecheck(rx, c(31.5, 95.0), c(18.30, 97.17))
+rangecheck(w1, c( 0.0,  6.2 ), c( 0.00,  5.87))
+rangecheck(w2, c( 0.0,  7.26), c(-0.02,  7.09)) # used to be 72.6 instead of 7.26 (Apr 2022)
+rangecheck(rw, c( 0.0, 30.7 ), c(-0.45, 30.45))
+rangecheck(sf, c( 0.0, 39.2 ), c(-0.03, 38.20))
+rangecheck(rx, c(31.5, 95.0 ), c(18.30, 97.17))
+testthat::expect_equal("Radar tests passed", "Radar tests passed")
 })
 } # End radar
 
@@ -185,11 +186,11 @@ testthat::expect_equal(findID(), "")
 
 testthat::test_that("indexFTP warns and works as intended", {
 base <- "https://opendata.dwd.de/weather/radar/radolan/rw/"
-testthat::expect_warning(indexFTP(base, folder="", dir=tempdir(), quiet=TRUE),
+testthat::expect_error(indexFTP(base, folder="", dir=tempdir(), quiet=TRUE),
                          "base should start with ftp://")
 base <- "ftp://opendata.dwd.de/weather/radar/radolan/rw"
 rw <- indexFTP(base, folder="", dir=tempdir(), quiet=TRUE, exclude.latest.bin=FALSE)
-testthat::expect_equal(tail(rw,1), "/raa01-rw_10000-latest-dwd---bin")
+testthat::expect_true("/raa01-rw_10000-latest-dwd---bin" %in% tail(rw,2))
 })
 
 
@@ -209,37 +210,25 @@ testthat::expect_equal(selectDWD(id="00386", res="daily", var="kl", per="histori
 })
 
 testthat::test_that("selectDWD can choose Beschreibung meta files", {
-testthat::expect_equal(selectDWD(id="00386", res="daily", var="kl", per="h", meta=TRUE),
+link <- selectDWD(res="daily", var="kl", per="h", meta=TRUE)
+link <- link[!grepl("mn4_Beschreibung",link)]
+link <- grep(".txt$", link, value=TRUE)
+testthat::expect_equal(link,
   paste0(dwdbase, "/daily/kl/historical/KL_Tageswerte_Beschreibung_Stationen.txt"))
-
-testthat::expect_equal(selectDWD(id="00386", res="daily", var="kl", per="h", meta=TRUE),
-  selectDWD(res="daily", var="kl", per="h", meta=TRUE))
 })
 
 
 testthat::test_that("selectDWD properly vectorizes", {
-testthat::expect_type(selectDWD(id="01050", res="daily", var="kl", per=c("r","h")), "list")
+testthat::expect_type(selectDWD(id="01050", res="daily", var="kl", per=c("r","h")), "character")
 testthat::expect_type(selectDWD(id="01050", res="daily", var="kl", per="rh"), "character")
 # all zip files in all paths matching id:
 allzip_id <- selectDWD(id=c(1050, 386), res="",var="",per="", quiet=TRUE)
 # all zip files in a given path (if ID is empty):
 allzip_folder <- selectDWD(id="", res="daily", var="kl", per="recent")
-testthat::expect_equal(length(allzip_id), 2)
-testthat::expect_gte(length(allzip_id[[1]]), 200)
-testthat::expect_gte(length(allzip_id[[2]]), 7)
+testthat::expect_gte(length(allzip_id), 277)
 testthat::expect_gte(length(allzip_folder), 573)
 })
 
-
-testthat::test_that("selectDWD uses remove_dupli correctly", {
-fi <- data.frame(res="aa", var="bb", per="cc", id=42, start=as.Date("1989-07-01"), 
-                 end=as.Date(c("2016-12-31","2015-12-31")), ismeta=FALSE, 
-                 path=c("longer", "shorter"))
-testthat::expect_length(selectDWD(res="aa",var="bb",per="cc",id=42,findex=fi, quiet=TRUE), 1)
-testthat::expect_length(selectDWD(res="aa",var="bb",per="cc",id=42,findex=fi, quiet=TRUE, remove_dupli=FALSE), 2)
-testthat::expect_warning(selectDWD(res="aa",var="bb",per="cc",id=42,findex=fi), 
-                         "selectDWD: duplicate file on FTP server")
-})
 
 # selectDWD warnings ----
 
@@ -248,37 +237,36 @@ messaget("++ Testing selectDWD warnings")
 oop <- options(rdwdquiet=FALSE)
 
 testthat::test_that("selectDWD warns as intended", {
-testthat::expect_warning(selectDWD(res="",var="",per=""),
-               "selectDWD: neither station ID nor valid FTP folder is given.")
+testthat::expect_error(selectDWD(res="",var="",per=""),
+               "selectDWD: One \\(or both\\) of 'id' and 'res/var/per' must be given.")
+testthat::expect_error(
 testthat::expect_warning(selectDWD(7777, res="",var="",per=""),
-               "selectDWD -> findID: no ID could be determined from name '7777'.")
-testthat::expect_warning(selectDWD(7777, res="",var="",per=""),
-               "selectDWD: neither station ID nor valid FTP folder is given.")
+               "selectDWD -> findID: no ID could be determined from name '7777'."),
+          "of 'id' and 'res/var/per' must be given.")
+
 testthat::expect_warning(selectDWD(id=7777, res="",var="",per=""),
-               "selectDWD: in file index 'fileIndex', there are 0 files with ID 7777")
+               "selectDWD: No entries in file index 'fileIndex' match your query")
 testthat::expect_warning(selectDWD(id="", res="dummy", var="dummy", per=""),
-               "according to file index 'fileIndex', the following path doesn't exist: /dummy/dummy/")
+               "selectDWD: No entries in file index 'fileIndex' match your query")
 testthat::expect_warning(selectDWD(id="", res="dummy", var="dummy", per=""),
-               "according to file index 'fileIndex', there is no file in '/dummy/dummy/' with ID NA.")
+               "selectDWD: No entries in file index 'fileIndex' match your query")
 testthat::expect_warning(selectDWD(res="dummy", var="", per=""),
-               "selectDWD: neither station ID nor valid FTP folder is given.")
-testthat::expect_warning(selectDWD(res="daily", var="", per="r"),
-               "selectDWD: neither station ID nor valid FTP folder is given.")
-testthat::expect_warning(selectDWD(res="daily", var="kl", per=""),
-               "according to file index 'fileIndex', there is no file in '/daily/kl/' with ID NA.")
-testthat::expect_warning(selectDWD(id="01050", res=c("daily","monthly"), var="kl", per=""), # needs 'per'
-               "according to file index 'fileIndex', there is no file in \n - '/daily/kl/' with ID 1050")
+               "selectDWD: No entries in file index 'fileIndex' match your query")
+testthat::expect_gte(length(selectDWD(res="daily", var="",   per="r")), 3414)
+testthat::expect_gte(length(selectDWD(res="daily", var="kl", per="" )), 1863)
+testthat::expect_length(selectDWD(id="01050", res=c("daily","monthly"), var="kl", per=""), 4)
 testthat::expect_warning(selectDWD(id="00386", res="",var="",per="", meta=TRUE),
-               "meta is ignored if id is given, but path is not given.")
+               "selectDWD: No entries in file index 'fileIndex' match your query")
 testthat::expect_warning(selectDWD("Potsdam", res="multi_annual", var="mean_81-10", per=""),
-               "selectDWD: multi_annual data is not organized by station ID")
-testthat::expect_warning(selectDWD(res="multi_annual", var="mean_81-10", per="r"),
-               "selectDWD: multi_annual data is not organized in period folders")
+               "selectDWD: Setting id and var to '' for multi_annual data. Use per to choose period.")
+testthat::expect_length(selectDWD("", res="multi_annual", per="mean_81-10"), 8)
+testthat::expect_warning(selectDWD("Potsdam", "annual", "kl", "r", dude=55),
+                "selectDWD: unused arguments: dude")
 
 testthat::expect_error(selectDWD(id="Potsdam", res="daily", var="solar"),
              "selectDWD: id may not contain letters: Potsdam")
 testthat::expect_error(selectDWD(id="", current=TRUE, res="",var="",per=""),
-             "selectDWD: current=TRUE, but no valid paths available.")
+             "of 'id' and 'res/var/per' must be given.")
 })
 
 options(oop)
@@ -302,8 +290,11 @@ links <- selectDWD("Potsdam","","","", quiet=TRUE) # does not include multi_annu
 toexclude <- grep("1_minute", links)
 toexclude <- toexclude[-(length(toexclude)-3)]
 toexclude <- c(toexclude, grep("10_minutes", links)[-1])
-files <- dataDWD(links[-toexclude], dir=dir_data, force=NA, overwrite=TRUE, read=FALSE, progbar=FALSE)
-contents <- readDWD(files, progbar=FALSE)
+links <- links[-toexclude]
+links <- links[!grepl("meta_data/Meta_Daten", links)]
+files <- dataDWD(links, dir=dir_data, force=NA, overwrite=TRUE, read=FALSE, progbar=FALSE)
+contents <- readDWD(sample(files), progbar=TRUE)
+testthat::expect_length(contents, length(files))
 })
 
 
@@ -322,9 +313,11 @@ rvp <- unique(fileIndex[outdated,1:3])
 alloutdated <- sapply(1:nrow(rvp), function(r)
  {
  fi <- fileIndex$res==rvp[r, "res"] &
-  fileIndex$var==rvp[r, "var"] &
-  fileIndex$per==rvp[r, "per"]
- all(fi[outdated])
+       fileIndex$var==rvp[r, "var"] &
+       fileIndex$per==rvp[r, "per"]
+ fi <- fileIndex[fi,]
+ fi <- as.numeric(format(fi$end, "%Y"))
+ all(fi<lastyear, na.rm=TRUE)
  })
 rvp <- apply(rvp, 1, paste, collapse="/")
 rvp <- unname(rvp)

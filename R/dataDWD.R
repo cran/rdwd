@@ -27,7 +27,7 @@
 #'          see also [berryFunctions::climateGraph()]
 #' @keywords data file
 #' @importFrom utils tail download.file browseURL
-#' @importFrom berryFunctions newFilename owa traceCall truncMessage
+#' @importFrom berryFunctions newFilename owa tmessage twarning tstop truncMessage
 #' @importFrom pbapply pblapply
 #' @importFrom stats runif
 #' @export
@@ -36,7 +36,7 @@
 #' # find FTP files for a given station name and file path:
 #' link <- selectDWD("Fuerstenzell", res="hourly", var="wind", per="recent")
 #' # download file:
-#' fname <- dataDWD(link, dir=tempdir(), read=FALSE) ; fname
+#' fname <- dataDWD(link, dir=locdir(), read=FALSE) ; fname
 #' # dir="DWDdata" is the default directory to store files
 #' # unless force=TRUE, already obtained files will not be downloaded again
 #' 
@@ -52,7 +52,7 @@
 #' 
 #' # current and historical files:
 #' link <- selectDWD("Potsdam", res="daily", var="kl", per="hr"); link
-#' potsdam <- dataDWD(link, dir=tempdir())
+#' potsdam <- dataDWD(link, dir=locdir())
 #' potsdam <- do.call(rbind, potsdam) # this will partly overlap in time
 #' plot(TMK~MESS_DATUM, data=tail(potsdam,1500), type="l")
 #' # The straight line marks the jump back in time
@@ -80,11 +80,11 @@
 #' @param force  Logical (vector): always download, even if the file already exists in `dir`?
 #'               Use NA to force re-downloading files older than 24 hours.
 #'               Use a numerical value to force after that amount of hours.
-#'               Note: if `force!=FALSE`, you might want to set `overwrite=TRUE` as well.
-#'               If `force=FALSE`, the file is still read (or name returned).
+#'               Note: if `force` is not FALSE, the `overwrite` default is TRUE.
 #'               DEFAULT: FALSE
 #' @param overwrite Logical (vector): if force=TRUE, overwrite the existing file
-#'               rather than append "_1"/"_2" etc to the filename? DEFAULT: FALSE
+#'               rather than append "_1"/"_2" etc to the filename? 
+#'               DEFAULT: `!isFALSE(force)`, i.e. true when `force` is specified.
 #' @param read   Logical: read the file(s) with [readDWD()]? If FALSE,
 #'               only download is performed and the filename(s) returned. DEFAULT: TRUE
 #' @param dbin   Logical: Download binary file, i.e. add `mode="wb"` to the
@@ -92,6 +92,9 @@
 #'               See [Website](https://bookdown.org/brry/rdwd/raster-data.html#binary-file-errors) 
 #'               for details.
 #'               DEFAULT: TRUE
+#' @param method [download.file] `method`. Introduced in version 1.5.25 (2022-05-12)
+#'               as triggered by <https://github.com/brry/rdwd/issues/34>.
+#'               DEFAULT: `getOption("download.file.method")`
 #' @param dfargs Named list of additional arguments passed to [download.file()]
 #'               Note that mode="wb" is already passed if `dbin=TRUE`
 #' @param sleep  Number. If not 0, a random number of seconds between 0 and
@@ -120,9 +123,10 @@ base=dwdbase,
 joinbf=FALSE,
 dir="DWDdata",
 force=FALSE,
-overwrite=FALSE,
+overwrite=!isFALSE(force),
 read=TRUE,
 dbin=TRUE,
+method=getOption("download.file.method"),
 dfargs=NULL,
 sleep=0,
 progbar=!quiet,
@@ -133,19 +137,21 @@ quiet=rdwdquiet(),
 ...
 )
 {
-if(!is.null(file)) stop("The argument 'file' has been renamed to 'url' with rdwd version 1.3.34, 2020-07-28")
-if(!is.atomic(url)) stop("url must be a vector, not a ", class(url))
-if(!is.character(url)) stop("url must be char, not ", class(url))
+if(!is.null(file)) tstop("The argument 'file' has been renamed to 'url' with rdwd version 1.3.34, 2020-07-28")
+if(!is.atomic(url)) tstop("url must be a vector, not a ", class(url))
+if(!is.character(url)) tstop("url must be char, not ", class(url))
+if(missing(dir)) twarning("In late 2022, dir will default to locdir(). ",
+                         "From then on, use dir='DWDdata' explicitely to store in a project-specific folder.")
 base <- sub("/$","",base) # remove accidental trailing slash
 url <- sub("^/","",url) # remove accidental leading slash
 if(joinbf)  url <- paste0(base,"/",url)
 if(missing(progbar) & length(url)==1) progbar <- FALSE
 if(any(url==""))
 {
-  message(traceCall(1, "", ": "), "Removing ", sum(url==""), " empty element(s) from url vector.")
+  tmessage("Removing ", sum(url==""), " empty element(s) from url vector.")
   url <- url[url!=""]
 }
-if(length(url)<1) stop("The vector of urls to be downloaded is empty.")
+if(length(url)<1) tstop("The vector of urls to be downloaded is empty.")
 # be safe from accidental vector input:
 dir     <- dir[1]
 progbar <- progbar[1]
@@ -169,7 +175,7 @@ outfile <- gsub(paste0(base,"/"), "", url)
 outfile <- gsub("/", "_", outfile)
 
 # force=NA management
-if(is.null(force)) stop("force cannot be NULL. Must be TRUE, FALSE, NA or a number.")
+if(is.null(force)) tstop("'force' cannot be NULL. Must be TRUE, FALSE, NA or a number.")
 force <- rep(force, length=length(outfile)) # recycle vector
 fT <- sapply(force, isTRUE)
 fF <- sapply(force, isFALSE)
@@ -181,7 +187,7 @@ force <- difftime(Sys.time(), file.mtime(outfile), units="h") > force
 dontdownload <- file.exists(outfile) & !force
 if( any(dontdownload) & !quiet )
   {
-  message(traceCall(1, "", ": "), sum(dontdownload), " file", if(sum(dontdownload)>1)"s",
+  tmessage(sum(dontdownload), " file", if(sum(dontdownload)>1)"s",
           " already existing and not downloaded again: ",
           berryFunctions::truncMessage(outfile[dontdownload], ntrunc=ntrunc, prefix=""),
           "\nNow downloading ",sum(!dontdownload)," files...")
@@ -197,7 +203,7 @@ dl_results <- lapply(seq_along(url), function(i)
   if(!dontdownload[i])
   {
   # Actual file download:
-  dfdefaults <- list(url=url[i], destfile=outfile[i], quiet=TRUE)
+  dfdefaults <- list(url=url[i], destfile=outfile[i], method=method, quiet=TRUE)
   if(dbin) dfdefaults <- c(dfdefaults, mode="wb")
   e <- try(suppressWarnings(do.call(download.file,
                          berryFunctions::owa(dfdefaults, dfargs))), silent=TRUE)
@@ -229,7 +235,7 @@ if(any(iserror))
 # ------------------------------------------------------------------------------
 # Output: Read the file or outfile name:
 output <- outfile
-if(read) output <- readDWD(file=outfile, progbar=progbar, ...)
+if(read) output <- readDWD(file=outfile, quiet=quiet, progbar=progbar, ...)
 # output:
 return(invisible(output))
 }

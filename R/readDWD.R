@@ -22,7 +22,7 @@
 #'          <https://bookdown.org/brry/rdwd>
 #' @keywords file chron
 #' @importFrom utils read.table unzip read.fwf untar write.table
-#' @importFrom berryFunctions checkFile na9 traceCall l2df owa
+#' @importFrom berryFunctions checkFile na9 twarning tstop l2df owa
 #' @importFrom pbapply pblapply
 #' @importFrom tools file_path_sans_ext
 #' @export
@@ -42,11 +42,13 @@
 #'               DEFAULT: NA
 #' @param format,tz Format and time zone of time stamps, see [readDWD.data()]
 #' @param dividebyten Logical (vector): Divide the values in raster files by ten?
-#'               Used in [readDWD.raster()] and [readDWD.asc()].
+#'               That way, \[1/10 mm] gets transformed to \[mm] units.
+#'               Used in [readDWD.radar()], [readDWD.raster()] and [readDWD.asc()].
 #'               DEFAULT: TRUE
 #' @param var    var for [readDWD.nc()]. DEFAULT: ""
 #' @param progbar Logical: present a progress bar with estimated remaining time?
-#'               If missing and length(file)==1, progbar is internally set to FALSE.
+#'               If missing and length(file)==1, progbar is internally set to FALSE,
+#'               unless binary files are to be read.
 #'               DEFAULT: !quiet
 #' @param quiet  Logical: suppress messages? DEFAULT: FALSE through [rdwdquiet()]
 #' @param \dots  Further arguments passed to the internal `readDWD.*`
@@ -69,7 +71,12 @@ quiet=rdwdquiet(),
 {
 # recycle arguments:
 len <- length(file)
-if(missing(progbar) & len==1 & all(type!="binary") & all(type!="asc")) progbar <- FALSE
+if(missing(progbar) & len==1 & all(!type %in% c("binary","asc","rklim"))) progbar <- FALSE
+
+wrongtype <- !type %in% validFileTypes # should be caught by fileType, but just in case
+if(any(wrongtype)) tstop("invalid type (",type[wrongtype][1],") given for file '",
+                         file[wrongtype][1],"'. See  ?fileType")
+
 
 # fast reading with fread:
 if("data" %in% type)
@@ -78,7 +85,7 @@ if(anyNA(fread))
   {
   haspack <- requireNamespace("data.table", quietly=TRUE)
   if(haspack && Sys.which("unzip")=="") 
-    warning("R package 'data.table' available for fast reading of files, ",
+   twarning("R package 'data.table' available for fast reading of files, ",
             "but system command 'unzip' could not be found. Now reading slowly.\n",
             "See   https://bookdown.org/brry/rdwd/fread.html")
   fread[is.na(fread)] <- haspack && Sys.which("unzip")!=""
@@ -87,11 +94,12 @@ if(any(fread))
   {
   checkSuggestedPackage("data.table", "rdwd::readDWD with fread=TRUE")
   checkSuggestedPackage("bit64",      "rdwd::readDWD with fread=TRUE")
-  if(Sys.which("unzip")=="") warning("system command 'unzip' could not be found. ",
+  if(Sys.which("unzip")=="") twarning("system command 'unzip' could not be found. ",
                                      "Expect trouble with data.table::fread.\n",
                                      "See   https://bookdown.org/brry/rdwd/fread.html")
   }
-} # end fread / unzip checks
+} 
+# end fread / unzip checks
 
 if(len>1)
   {
@@ -130,26 +138,32 @@ nt <- function(x, pre="readDWD.", post="()") # nt: nice table
   paste0(pre,x, collapse=" / ")
   }
 msg <- paste0("Reading ",length(file)," file", if(length(file)>1)"s", " with ",nt(type))
-if(any(type=="data")) msg <- paste0(msg, " and fread=",nt(fread,"",""))
+if(any("data" %in% type)) msg <- paste0(msg, " and fread=",nt(fread,"",""))
+if(any(c("radar", "raster", "asc") %in% type)) 
+  msg <- paste0(msg, " and dividebyten=",nt(dividebyten,"",""))
+if(any("grib2" %in% type))
+ message(msg, appendLF=FALSE) else
 message(msg, " ...")
 }
 
 # loop over each filename
-output <- lapply(seq_along(file), function(i)
-{
+readDWDloopfun <- function(i, ...){
+arg <- NULL
+if(type[i]=="data")   arg <- list(fread=fread[i], varnames=varnames[i], format=format[i], tz=tz[i])
+if(type[i]=="binary") arg <- list(progbar=progbar)
+if(type[i]=="rklim")  arg <- list(progbar=progbar)
+if(type[i]=="raster") arg <- list(dividebyten=dividebyten[i])
+if(type[i]=="radar")  arg <- list(dividebyten=dividebyten[i])
+if(type[i]=="nc")     arg <- list(var=var[i])
+if(type[i]=="asc")    arg <- list(progbar=progbar, dividebyten=dividebyten[i])
+# arguments to subfunction:
+arg <- c(list(file=file[i], quiet=quiet, ...), arg)
 # call subfunction:
-if(type[i]=="multia") return(readDWD.multia(file[i], quiet=quiet, ...))
-if(type[i]=="stand")  return(readDWD.stand( file[i], quiet=quiet, ...))
-if(type[i]=="meta")   return(readDWD.meta(  file[i], quiet=quiet, ...))
-if(type[i]=="binary") return(readDWD.binary(file[i], quiet=quiet, progbar=progbar, ...))
-if(type[i]=="raster") return(readDWD.raster(file[i], quiet=quiet, dividebyten=dividebyten[i], ...))
-if(type[i]=="nc")     return(readDWD.nc(    file[i], quiet=quiet, var=var[i], ...))
-if(type[i]=="radar")  return(readDWD.radar( file[i], quiet=quiet, ...))
-if(type[i]=="asc")    return(readDWD.asc(   file[i], quiet=quiet, progbar=progbar, dividebyten=dividebyten[i], ...))
-if(type[i]=="grib2")  return(readDWD.grib2( file[i], quiet=quiet, ...))
-if(type[i]=="data")   return(readDWD.data(  file[i], quiet=quiet, fread=fread[i], varnames=varnames[i], format=format[i], tz=tz[i], ...))
-stop("invalid type (",type[i],") given for file '",file[i],"'. See  ?fileType")
-}) # lapply loop end
+out <- try(do.call(paste0("readDWD.",type[i]), arg), silent=TRUE)
+if(inherits(out, "try-error")) tstop("failure reading file:\n", file[i], "\n", out)
+return(out)
+}
+output <- lapply(seq_along(file), readDWDloopfun, ...)
 
 names(output) <- tools::file_path_sans_ext(basename(file))
 output <- if(length(file)==1) output[[1]] else output
@@ -198,11 +212,14 @@ return(invisible(output))
 readDWD.data <- function(file, fread=FALSE, varnames=FALSE, format=NA, tz="GMT",
                          quiet=rdwdquiet(), ...)
 {
+if(grepl("meta_data_Meta_Daten", file)) tstop("This 'meta_data_Meta_Daten' file should be read with readMeta(",file,")")
 if(fread)
   {
   # http://dsnotes.com/post/2017-01-27-lessons-learned-from-outbrain-click-prediction-kaggle-competition/
   fp <- unzip(file, list=TRUE) # file produkt*, the actual datafile
   fp <- fp$Name[grepl("produkt",fp$Name)]
+  if(length(fp)!=1) tstop("There should be a single 'produkt*' file, but there are ",
+                        length(fp), " in\n  ", file, "\n  Consider re-downloading (with force=TRUE).")
   dat <- data.table::fread(cmd=paste("unzip -p", file, fp), na.strings=na9(nspace=0),
                            header=TRUE, sep=";", stringsAsFactors=TRUE, data.table=FALSE, ...)
   } else
@@ -214,7 +231,7 @@ unzip(file, exdir=exdir)
 on.exit(unlink(exdir, recursive=TRUE), add=TRUE)
 # Read the actual data file:
 f <- dir(exdir, pattern="produkt*", full.names=TRUE)
-if(length(f)!=1) stop("There should be a single 'produkt*' file, but there are ",
+if(length(f)!=1) tstop("There should be a single 'produkt*' file, but there are ",
                       length(f), " in\n  ", file, "\n  Consider re-downloading (with force=TRUE).")
 dat <- read.table(f, na.strings=na9(), header=TRUE, sep=";", as.is=FALSE, ...)
 } # end if(!fread)
@@ -223,7 +240,7 @@ if(varnames)  dat <- newColumnNames(dat)
 # return if file is empty, e.g. for daily/more_precip/hist_05988 2019-05-16:
 if(nrow(dat)==0)
   {
-  if(!quiet) warning("File contains no rows: ", file)
+  if(!quiet) twarning("File contains no rows: ", file)
   return(dat)
   }
 # process time-stamp: http://stackoverflow.com/a/13022441
@@ -233,7 +250,7 @@ if(!is.null(format))
   if("MESS_DATUM_BEGINN" %in% colnames(dat))
     dat <- cbind(dat[,1, drop=FALSE], MESS_DATUM=dat$MESS_DATUM_BEGINN + 14, dat[,-1])
   if(!"MESS_DATUM" %in% colnames(dat))
-    warning("There is no column 'MESS_DATUM' in ",file, call.=FALSE) else
+    twarning("There is no column 'MESS_DATUM' in ",file) else
     {
     nch <- nchar(as.character(dat$MESS_DATUM[1]))
     if(is.na(format)) format <- if(nch== 8) "%Y%m%d" else
@@ -242,6 +259,49 @@ if(!is.null(format))
     dat$MESS_DATUM <- as.POSIXct(as.character(dat$MESS_DATUM), format=format, tz=tz)
     }
   }
+# final output:
+return(dat)
+}
+
+
+
+# ~ deriv ----
+
+#' @title read derived dwd data
+#' @description Read dwd data from /CDC/derived_germany/.
+#' Intended to be called via [readDWD()].
+#' @return data.frame
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}
+#' @seealso [readDWD()], https://bookdown.org/brry/rdwd/use-case-derived-data.html
+#' @param file     Name of file on harddrive, like e.g.
+#'                 DWDdata/soil_daily_historical_derived_germany_soil_daily_historical_3987.txt.gz
+#' @param gargs    If fread=FALSE: Named list of arguments passed to
+#'                 [R.utils::gunzip()], see [readDWD.raster()]. DEFAULT: NULL
+#' @param todate   Logical: Convert char column 'Datum' or 'Monat' with [as.Date()]?
+#'                 The format is currently hard-coded. Monthly data gets mapped to yyyy-mm-15
+#'                 DEFAULT: TRUE
+#' @param quiet    Ignored.
+#'                 DEFAULT: FALSE through [rdwdquiet()]
+#' @param \dots    Further arguments passed to [read.table()] or [data.table::fread()]
+readDWD.deriv <- function(file, gargs=NULL, todate=TRUE, quiet=rdwdquiet(), ...)
+{
+# I tried data.table::fread(file, na.strings=na9(nspace=0), header=TRUE, sep=";", data.table=FALSE, ...)
+# but it's not really faster in most cases. 
+# gunzip is very fast in subsequent calls, only slow in the first call.
+checkSuggestedPackage("R.utils", "rdwd:::readDWD.derived")
+gdef <- list(filename=file, remove=FALSE, skip=TRUE) # gunzip arguments
+gfinal <- berryFunctions::owa(gdef, gargs, "filename")
+file2 <- do.call(R.utils::gunzip, gfinal)
+dat <- read.table(file2, header=TRUE, sep=";", ...)
+# convert time-stamp:
+if(todate)
+  if(!any(c("Datum","Monat") %in% colnames(dat)))
+    twarning("There is no column 'Datum' or 'Monat' in ",file) else
+    {
+    if(is.null(dat$Datum))
+    dat$Monat <- as.Date(paste0(dat$Monat, "15"), format="%Y%m%d") else
+    dat$Datum <- as.Date(as.character(dat$Datum), format="%Y%m%d")
+    }
 # final output:
 return(dat)
 }
@@ -262,12 +322,12 @@ return(dat)
 #' @examples
 #' \dontrun{ # Excluded from CRAN checks, but run in localtests
 #' 
-#' # Temperature aggregates (2019-04 the 9th file):
-#' durl <- selectDWD(res="multi_annual", var="mean_81-10", per="")[9]
-#' murl <- selectDWD(res="multi_annual", var="mean_81-10", per="", meta=TRUE)[9]
+#' # Temperature aggregates (2019-04 the 9th file, 2022-05 the 8th):
+#' durl <- selectDWD(res="multi_annual", var="mean_81-10", per="")[8]
+#' murl <- selectDWD(res="multi_annual", var="mean_81-10", per="", meta=TRUE)[8]
 #' 
-#' ma_temp <- dataDWD(durl, dir=localtestdir())
-#' ma_meta <- dataDWD(murl, dir=localtestdir())
+#' ma_temp <- dataDWD(durl, dir=locdir())
+#' ma_meta <- dataDWD(murl, dir=locdir())
 #' 
 #' head(ma_temp)
 #' head(ma_meta)
@@ -287,10 +347,10 @@ return(dat)
 #' 
 #' load(system.file("extdata/DEU.rda", package="rdwd"))
 #' pdf("MultiAnn.pdf", width=8, height=10)
-#' par(bg=8)
+#' par(bg="grey90")
 #' for(m in colnames(ma)[8:19])
 #'   {
-#'   raster::plot(DEU, border="darkgrey")
+#'   raster::plot(DEU, border="grey40")
 #'   berryFunctions::colPoints(ma[-262,]$geogr..Laenge, ma[-262,]$geogr..Breite, ma[-262,m],
 #'                             asp=1.4, # Range=range(ma[-262,8:19]),
 #'                             col=berryFunctions::divPal(200, rev=TRUE), zlab=m, add=T)
@@ -339,7 +399,7 @@ out
 #' \dontrun{ # Excluded from CRAN checks, but run in localtests
 #' 
 #' link <- selectDWD(id=10381, res="subdaily", var="standard_format", per="r")
-#' file <- dataDWD(link, dir=localtestdir(), read=FALSE)
+#' file <- dataDWD(link, dir=locdir(), read=FALSE)
 #' sf <- readDWD(file)
 #' 
 #' sf2 <- readDWD(file, fast=FALSE) # 20 secs!
@@ -386,7 +446,7 @@ readDWD.stand <- function(file, fast=TRUE, fileEncoding="latin1",
 # check column existence
 musthave <- c("Pos","Fehlk","dividebyten","Label")
 has <- musthave %in% colnames(formIndex)
-if(any(!has)) stop("formIndex must contain column(s) ", musthave[!has])
+if(any(!has)) tstop("formIndex must contain column(s) ", musthave[!has])
 # get column widths:
 width <- diff(as.numeric(formIndex$Pos))
 width <- c(width, 1)
@@ -404,13 +464,13 @@ if(fast)
   } else # see developmentNotes for speed comparison
   sf <- read.fwf(file, widths=width, stringsAsFactors=FALSE, fileEncoding=fileEncoding, ...)
 # dimension check:
-if(ncol(sf) != nrow(formIndex)) stop("incorrectly read file: ", file,"\n",
+if(ncol(sf) != nrow(formIndex)) tstop("incorrectly read file: ", file,"\n",
    ncol(sf), " columns instead of ", nrow(formIndex), " as dictated by formIndex.")
 # NAs (starting with column 7):
 for(i in which(formIndex$Fehlk!=""))
   {
   isNA <- as.character(sf[,i])==formIndex$Fehlk[i]
-  if(anyNA(isNA)) stop("NAs in comparison in column ", i, " of file ", file)
+  if(anyNA(isNA)) tstop("NAs in comparison in column ", i, " of file ", file)
   sf[isNA, i] <- NA
   }
 # divide by ten:
@@ -447,10 +507,12 @@ return(sf)
 #' \dontrun{ # Excluded from CRAN checks, but run in localtests
 #' 
 #' link <- selectDWD(res="daily", var="kl", per="r", meta=TRUE)
+#' link <- link[!grepl("mn4", link)] # for mn4 file May 2022
+#' link <- grep(".txt$", link, value=TRUE)
 #' if(length(link)!=1) stop("length of link should be 1, but is ", length(link),
 #'                 ":\n", berryFunctions::truncMessage(link,prefix="",sep="\n"))
 #' 
-#' file <- dataDWD(link, dir=localtestdir(), read=FALSE)
+#' file <- dataDWD(link, dir=locdir(), read=FALSE)
 #' meta <- readDWD(file)
 #' head(meta)
 #' 
@@ -468,6 +530,9 @@ readDWD.meta <- function(file, quiet=rdwdquiet(), ...)
 # read a few lines to get column widths and names
 oneline <- readLines(file, n=60, encoding="latin1")
 # n=60 or 15 has no influence on total readDWD.meta time for 97 meta files (16 secs)
+oneline <- sub("Berlin-Dahlem (LFAG)", "Berlin-Dahlem_(LFAG)", oneline, fixed=TRUE)
+oneline <- sub("Berlin-Dahlem (FU)"  , "Berlin-Dahlem_(FU)"  , oneline, fixed=TRUE)
+# Fix reading error if only these two exist, like in daily/kl/hist mn4_Beschreibung_Stationen.txt 2022-04-07
 
 # column names:
 # remove duplicate spaces (2018-03 only in subdaily_stand...Beschreibung....txt)
@@ -495,7 +560,7 @@ if(grepl("subdaily_standard_format", file))
                       "geoBreite", "geoLaenge", "Stationsname", "Bundesland")
  }
 # check classes:
-if(ncol(stats)!=8) stop(ncol(stats)," columns detected instead of 8 for ", file)
+if(ncol(stats)!=8) tstop(ncol(stats)," columns detected instead of 8 for ", file)
 classes <- c("integer", "integer", "integer", "integer", "numeric", "numeric", "character", "character")
 actual <- sapply(stats, class)
 if(actual[4]=="numeric") classes[4] <- "numeric"
@@ -504,8 +569,7 @@ if(!all(actual == classes))
   msg <- paste0(names(actual)[actual!=classes], ": ", actual[actual!=classes],
                 " instead of ", classes[actual!=classes], ".")
   msg <- paste(msg, collapse=" ")
-  warning(traceCall(3, "", ": "), "reading file '", file,
-          "' did not give the correct column classes. ", msg, call.=FALSE)
+  twarning("reading file '", file,"' did not give the correct column classes. ", msg)
   }
 # return meta data.frame:
 stats
@@ -535,7 +599,7 @@ stats
 #' 
 #' SF_link <- "/daily/radolan/historical/bin/2017/SF201712.tar.gz"
 #' SF_file <- dataDWD(url=SF_link, base=gridbase, joinbf=TRUE,   # 204 MB
-#'                      dir=localtestdir(), read=FALSE)
+#'                      dir=locdir(), read=FALSE)
 #' # exdir radardir set to speed up my tests:
 #' SF_exdir <- "C:/Users/berry/Desktop/DWDbinarySF"
 #' if(!file.exists(SF_exdir)) SF_exdir <- tempdir()
@@ -550,7 +614,7 @@ stats
 #' 
 #' RW_link <- "hourly/radolan/reproc/2017_002/bin/2017/RW2017.002_201712.tar.gz"
 #' RW_file <- dataDWD(url=RW_link, base=gridbase, joinbf=TRUE,   # 25 MB
-#'                   dir=localtestdir(), read=FALSE)
+#'                   dir=locdir(), read=FALSE)
 #' RW_exdir <- "C:/Users/berry/Desktop/DWDbinaryRW"
 #' if(!file.exists(RW_exdir)) RW_exdir <- tempdir()
 #' RW_rad <- readDWD(RW_file, selection=1:10, exdir=RW_exdir)
@@ -653,7 +717,7 @@ return(invisible(list(dat=rbmat, meta=rbmeta)))
 #' rasterbase <- paste0(gridbase,"/seasonal/air_temperature_mean")
 #' ftp.files <- indexFTP("/16_DJF", base=rasterbase, dir=tempdir())
 #' localfiles <- dataDWD(ftp.files[1:2], base=rasterbase, joinbf=TRUE,
-#'                       dir=localtestdir(), read=FALSE)
+#'                       dir=locdir(), read=FALSE)
 #' rf <- readDWD(localfiles[1])
 #' rf <- readDWD(localfiles[1]) # runs faster at second time due to skip=TRUE
 #' raster::plot(rf)
@@ -672,13 +736,11 @@ return(invisible(list(dat=rbmat, meta=rbmeta)))
 #'                    The internal defaults are: `remove=FALSE` (recommended to
 #'                    keep this so `file` does not get deleted) and `skip=TRUE`
 #'                    (which reads previously unzipped files as is).
-#'                    If `file` has changed, you might want to use
-#'                    `gargs=list(skip=FALSE, overwrite=TRUE)`
-#'                    or alternatively `gargs=list(temporary=TRUE)`.
+#'                    If `file` has changed, use `gargs=list(temporary=TRUE)`.
 #'                    The `gunzip` default `destname` means that the
 #'                    unzipped file is stored at the same path as `file`.
 #'                    DEFAULT gargs: NULL
-#' @param dividebyten Logical: Divide the numerical values by 10?
+#' @param dividebyten Logical: Divide the numerical values by 10? See [readDWD].
 #'                    DEFAULT: TRUE
 #' @param quiet       Ignored.
 #'                    DEFAULT: FALSE through [rdwdquiet()]
@@ -711,7 +773,6 @@ return(invisible(r))
 #' **cdf** is the output of [ncdf4::nc_open()].
 #' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Aug 2019
 #' @seealso [readDWD()]
-#' @importFrom berryFunctions removeSpace
 #' @importFrom utils menu tail capture.output
 #' @examples
 #' \dontrun{ # Excluded from CRAN checks, but run in localtests
@@ -720,7 +781,7 @@ return(invisible(r))
 #' 
 #' url <- "daily/Project_TRY/pressure/PRED_199606_daymean.nc.gz"  #  5 MB
 #' url <- "daily/Project_TRY/humidity/RH_199509_daymean.nc.gz"    # 25 MB
-#' file <- dataDWD(url, base=gridbase, joinbf=TRUE, dir=localtestdir(), read=FALSE)
+#' file <- dataDWD(url, base=gridbase, joinbf=TRUE, dir=locdir(), read=FALSE)
 #' nc <- readDWD(file)
 #' ncp <- plotRadar(nc, main=paste(nc@title, nc@z[[1]]), layer=1:3,
 #'                  col=seqPal(), proj="nc", extent="nc")
@@ -789,12 +850,12 @@ if(is.null(unit))
 if(substr(unit,1,4)=="days")
  {
  start <- sub("days since", "", unit)
- start <- strsplit(berryFunctions::removeSpace(start), " ")[[1]][1]
+ start <- strsplit(trimws(start), " ")[[1]][1]
  start <- as.Date(start)
  time <- start + ncdf4::ncvar_get(mycdf,'time')
  } else
  {
- start <- berryFunctions::removeSpace(sub("hours since", "", unit)) # always hours?
+ start <- trimws(sub("hours since", "", unit)) # always hours?
  start <- strptime(start, format="%F %T")
  time <- start + ncdf4::ncvar_get(mycdf,'time')*3600
  }
@@ -840,8 +901,7 @@ return(invisible(list(time=time, lat=LAT, lon=LON, var=VAR, varname=var,
 #' rrf <- indexFTP("hourly/radolan/recent/bin", base=gridbase, dir=tempdir())
 #' lrf <- dataDWD(rrf[773], base=gridbase, joinbf=TRUE, dir=tempdir(), read=FALSE)
 #' r <- readDWD(lrf)
-#' 
-#' plotRadar(r$dat, main=r$meta$date)
+#' plotRadar(r$dat, main=paste("mm in 24 hours preceding", r$meta$date))
 #' }
 #' @param file      Name of file on harddrive, like e.g.
 #'                  DWDdata/hourly/radolan/recent/bin/
@@ -852,11 +912,13 @@ return(invisible(list(time=time, lat=LAT, lon=LON, var=VAR, varname=var,
 #'                  to a list with data ([`raster::stack`]) +
 #'                  meta (list from the first subfile, but with vector of dates)?
 #'                  DEFAULT: TRUE
+#' @param dividebyten Logical: Divide the numerical values by 10? See [readDWD].
+#'                  toraster???  DEFAULT: TRUE
 #' @param quiet     Ignored.
 #'                  DEFAULT: FALSE through [rdwdquiet()]
 #' @param \dots     Further arguments passed to [dwdradar::readRadarFile()],
 #'                  i.e. `na` and `clutter`
-readDWD.radar <- function(file, gargs=NULL, toraster=TRUE, quiet=rdwdquiet(), ...)
+readDWD.radar <- function(file, gargs=NULL, toraster=TRUE, dividebyten=TRUE, quiet=rdwdquiet(), ...)
 {
 checkSuggestedPackage("dwdradar","rdwd:::readDWD.radar")
 checkSuggestedPackage("R.utils", "rdwd:::readDWD.radar")
@@ -867,6 +929,7 @@ rdata <- do.call(R.utils::gunzip, gfinal)
 rf <- dwdradar::readRadarFile(rdata, ...)
 if(toraster) checkSuggestedPackage("raster", "rdwd:::readDWD.radar with toraster=TRUE")
 if(toraster) rf$dat <- raster::raster(rf$dat)
+if(dividebyten) rf$dat <- rf$dat/10
 return(invisible(rf))
 }
 
@@ -887,7 +950,7 @@ return(invisible(rf))
 #' \dontrun{ # Excluded from CRAN checks, but run in localtests
 #' 
 #' # File selection and download:
-#' datadir <- localtestdir()
+#' datadir <- locdir()
 #' radbase <- paste0(gridbase,"/hourly/radolan/historical/asc/")
 #' radfile <- "2018/RW-201809.tar" # 25 MB to download
 #' file <- dataDWD(radfile, base=radbase, joinbf=TRUE, dir=datadir,
@@ -919,7 +982,7 @@ return(invisible(rf))
 #' @param exdir       Directory to unzip into. Unpacked files existing therein
 #'                    will not be untarred again, saving up to 15 secs per file.
 #'                    DEFAULT: NULL (subfolder of [tempdir()])
-#' @param dividebyten Divide numerical values by 10?
+#' @param dividebyten Divide numerical values by 10? See [readDWD].
 #'                    If dividebyten=FALSE and exdir left at NULL (tempdir), save
 #'                    the result on disc with [raster::writeRaster()].
 #'                    Accessing out-of-memory raster objects won't work if
@@ -978,6 +1041,150 @@ return(invisible(dat))
 
 
 
+# ~ rklim ----
+
+#' @title read dwd gridded radklim binary data
+#' @description read gridded radklim binary data.
+#' Intended to be called via [readDWD()].\cr
+#' Note: needs dwdradar >= 0.2.6 (2021-08-08)
+#' @return list depending on argument `toraster`, see there for details
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, Aug 2021.
+#' @seealso [readDWD.binary()], radar locations from \url{https://www.dwd.de/DE/leistungen/radarklimatologie/radklim_kompositformat_1_0.pdf?__blob=publicationFile&v=1}
+#' @examples
+#' \dontrun{ # Excluded from CRAN checks, but run in localtests
+#' yw_link <- "/5_minutes/radolan/reproc/2017_002/bin/2020/YW2017.002_202006.tar"
+#' yw_file <- dataDWD(url=yw_link, base=gridbase, joinbf=TRUE, dir=locdir(), read=FALSE)
+#' x <- readDWD(yw_file, selection=3641:3644) 
+#' # 00:30 for tar files, 01:40 for unpacking. 
+#' # If you need a preselection argument, let me know.
+#' raster::plot(x$dat)
+#'
+#' f <- system.file("tests//raa01-yw2017.002_10000-2006131525-dwd---bin", package="dwdradar")
+#' if(f=="") stop("dwdradar test file not found")
+#' # https://stackoverflow.com/a/72207233/1587132 on how to install with tests folder
+#' 
+#' x <- dwdradar::readRadarFile(f)
+#' x$dat <- raster::raster(x$dat)
+#' raster::plot(x$dat)
+#' plotRadar(x$dat, extent=c(-360, 380, -4730 ,-3690))
+#' 
+#' radloc <- read.table(header=T, sep=",", text="
+#' ND, NM, NS  ,   ED, EM, ES
+#' 53, 33, 50.4,   06, 44, 53.9
+#' 51, 07, 26.5,   13, 45, 48.5
+#' 51, 24, 18.5,   06, 57, 49.8
+#' 47, 52, 21.3,   08, 00, 24.6
+#' 54, 10, 23.2,   12, 06, 25.3
+#' 52, 28, 40.3,   13, 23, 13.0
+#' 54, 00, 15.8,   10, 02, 48.7
+#' 51, 07, 28.7,   13, 46, 07.1
+#' 49, 32, 26.4,   12, 24, 10.0
+#' 53, 20, 19.4,   07, 01, 25.5
+#' 51, 24, 20.2,   06, 58, 01.6
+#' 47, 52, 25.0,   08, 00, 13.0
+#' 51, 20, 06.0,   08, 51, 09.0
+#' 51, 18, 40.3,   08, 48, 07.2
+#' 50, 03, 06.0,   08, 34, 05.0
+#' 50, 01, 20.8,   08, 33, 30.7
+#' 53, 37, 16.5,   09, 59, 47.6
+#' 52, 27, 47.0,   09, 41, 53.9
+#' 52, 27, 36.2,   09, 41, 40.2
+#' 48, 10, 28.9,   12, 06, 06.3
+#' 48, 02, 31.7,   10, 13, 09.2
+#' 48, 20, 10.9,   11, 36, 42.1
+#' 50, 30, 00.4,   11, 08, 06.2
+#' 50, 06, 34.7,   06, 32, 53.9
+#' 49, 59, 05.1,   08, 42, 46.6
+#' 52, 38, 55.2,   13, 51, 29.6
+#' 54, 10, 32.4,   12, 03, 29.1
+#' 48, 35, 07.0,   09, 46, 58.0
+#' 52, 09, 36.3,   11, 10, 33.9")
+#' radloc$x <- radloc$ED + radloc$EM/60 + radloc$ES/3600
+#' radloc$y <- radloc$ND + radloc$NM/60 + radloc$NS/3600
+#' for(i in 1:29) berryFunctions::circle(radloc$x[i], radloc$y[i], 0.9)
+#' }
+#' @param file      Name of file on harddrive, like e.g.
+#'                  DWDdata/5_minutes_radolan_reproc_2017_002_bin_2020_YW2017.002_202006.tar
+#' @param exdir     Directory to unzip into. If existing, only the needed files
+#'                  will be unpacked with [untar()]. Note that exdir
+#'                  size will be around 17 GB for 5-minute files.
+#'                  If `unpacked=FALSE`, exdir can contain other files
+#'                  that will be ignored for the actual reading.
+#'                  DEFAULT: basename(file) at tempdir
+#' @param unpacked  Manually indicate whether .tar.gz files within .tar file
+#'                  have already been unpacked before.
+#'                  DEFAULT: NULL: checks if 'yw.*--bin' file(s) are present
+#' @param selection Optionally read only a subset of the ~ 12 x 24 x 30/31 = 8640 files.
+#'                  Called as `f[selection]`. DEFAULT: NULL (ignored)
+#' @param toraster  Logical: convert to raster stack? see [readDWD.binary]
+#'                  DEFAULT: TRUE
+#' @param quiet     Suppress progress messages?
+#'                  DEFAULT: FALSE through [rdwdquiet()]
+#' @param progbar   Show progress bars?
+#'                  DEFAULT: !quiet, i.e. TRUE
+#' @param \dots     Further arguments passed to [dwdradar::readRadarFile()],
+#'                  i.e. `na` and `clutter`
+
+readDWD.rklim <- function(file, exdir=NULL, unpacked=NULL, selection=NULL,
+                            toraster=TRUE, quiet=rdwdquiet(), progbar=!quiet, ...)
+{
+checkSuggestedPackage("dwdradar", "rdwd:::readDWD.radklim")
+if(progbar) lapply <- pbapply::pblapply
+# exdir:
+fn <- tools::file_path_sans_ext(basename(file))
+if(is.null(exdir)) exdir <- paste0(tempdir(),"/", fn)
+#
+if(is.null(unpacked)){
+unpacked <- any(grepl("yw.*--bin", dir(exdir)))
+if(!quiet) if(unpacked) message("Assuming files have been unpacked.") else
+                        message("Assuming files need to be unpacked.")
+}
+
+if(!unpacked){
+# untar layer 1:
+daydir <- paste0(exdir,"/dayfiles")
+untar(file, exdir=daydir) # 30/31 .tar.gz files (one for each day). overwrites existing files
+dayfiles <- dir(daydir, full.names=TRUE)
+# untar layer 2:
+if(!quiet) message("Listing contents of ",length(dayfiles)," .tar files ...")
+original <- lapply(dayfiles, untar, list=TRUE) # needed for dir file selection
+if(!quiet) message("Unpacking .tar files into ",exdir,"...")
+lapply(dayfiles, untar, exdir=exdir)
+# yields 30 * 24 * 12 = 8640 files each 1.7MB, takes ~25 secs
+f <- dir(exdir, full.names=TRUE) # 8641 files (including "dayfiles" folder name)
+# use only the files from file, not other stuff at exdir:
+f <- f[basename(f) %in% unlist(original)]
+unlink(daydir, recursive=TRUE)
+} else
+{
+message("Assuming exdir ",exdir," \n         only contains binary files from file '",file,"'")
+f <- dir(exdir, full.names=TRUE)
+}
+
+# read data (e.g 5-minutely files):
+if(!is.null(selection)) f <- f[selection]
+if(!quiet) message("Reading ",length(f)," files...")
+rb <- lapply(f, dwdradar::readRadarFile, ...)
+
+# list element names (time stamp):
+time <- sapply(rb, function(x) format(x$meta$date, "%F %T"))
+names(rb) <- time
+
+if(!toraster) return(invisible(rb))
+# else if toraster:
+checkSuggestedPackage("raster", "rdwd:::readDWD.radklim with toraster=TRUE")
+if(!quiet) message("Converting to raster...")
+rbmat <- base::lapply(rb,"[[",1)
+rbmat <- lapply(rbmat, raster::raster)
+rbmat <- raster::stack(rbmat)
+rbmeta <- rb[[1]]$meta
+rbmeta$filename <- file
+rbmeta$date <- as.POSIXct(time)
+return(invisible(list(dat=rbmat, meta=rbmeta)))
+}
+
+
+
 # ~ grib2 ----
 
 #' @title read nwp forecast data
@@ -990,49 +1197,114 @@ return(invisible(dat))
 #' <https://www.dwd.de/EN/aboutus/it/functions/Teasergroup/grib.html>\cr
 #' @examples
 #' \dontrun{ # Excluded from CRAN checks, but run in localtests
-#' # Deactivated 2021-04-08 since readDWD.grib2 -> rgdal::readGDAL -> Error:
-#' # **.grib2 is a grib file, but no raster dataset was successfully identified.
-#' warning("readDWD.grib2 is not tested due to unresolved problems.")
-#' if(FALSE){
-#' nwp_t2m_base <- "ftp://opendata.dwd.de/weather/nwp/icon-d2/grib/03/p"
+#' nwp_t2m_base <- "ftp://opendata.dwd.de/weather/nwp/icon-d2/grib/15/soiltyp"
 #' nwp_urls <- indexFTP("", base=nwp_t2m_base, dir=tempdir())
-#' nwp_file <- dataDWD(nwp_urls[6], base=nwp_t2m_base, dir=tempdir(),
-#'                     joinbf=TRUE, dbin=TRUE, read=FALSE)
-#' nwp_data <- readDWD(nwp_file, quiet=TRUE)
-#' plotRadar(nwp_data, project=FALSE)
+#' # for p instead of soiltyp, icosahedral_model-level files fail with GDAL errors,
+#' # see https://github.com/brry/rdwd/issues/28
+#' # regular-lat-lon_pressure-level files work with pack="terra" or "stars"
 #' 
-#' nwp_data_rgdal <- readDWD(nwp_file, toraster=FALSE)
-#' sp::plot(nwp_data_rgdal)
+#' nwp_file <- dataDWD(tail(nwp_urls,1), base=nwp_t2m_base, dir=tempdir(), 
+#'                     joinbf=TRUE, dbin=TRUE, read=FALSE)
+#' nwp_data <- readDWD(nwp_file)
+#' terra::plot(nwp_data) # same map with sp::plot
+#' addBorders() # the projection seems to be perfectly good :)
+#' 
+#' # index of GRIB files
+#' if(FALSE){ # indexing takes about 6 minutes!
+#' grib_base <- "ftp://opendata.dwd.de/weather/nwp/icon-d2/grib"
+#' grib_files <- indexFTP("", base=grib_base, dir=tempdir())
+#' for(f in unique(substr(grib_files, 1,3))) print(grib_files[which(substr(grib_files, 1,3)==f)[1]])
+#' View(data.frame(grep("regular",grib_files, value=TRUE)))
 #' }
 #' }
 #' @param file      Name of file on harddrive, like e.g.
 #'                  cosmo-d2_germany_regular-lat-lon_single-level_2021010100_005_T_2M.grib2.bz2
+#' @param pack      Char: package used for reading. 
+#'                  One of "terra" (the default), "stars"
+#'                  or "rgdal" (for the deprecated cosmo-d2 data). 
+#'                  See [issue](https://github.com/brry/rdwd/issues/28).
+#'                  DEFAULT: "terra"
 #' @param bargs     Named list of arguments passed to
 #'                  [R.utils::bunzip2()], see `gargs` in [readDWD.raster()]. DEFAULT: NULL
 #' @param toraster  Logical: convert [rgdal::readGDAL] output with [raster::raster()]?
+#'                  Only used if pack="rgdal".
 #'                  DEFAULT: TRUE
 #' @param quiet     Silence readGDAL completely, including warnings on 
 #'                  discarded ellps / datum. 
 #'                  DEFAULT: FALSE through [rdwdquiet()]
-#' @param \dots     Further arguments passed to [rgdal::readGDAL()],
-readDWD.grib2 <- function(file, bargs=NULL, toraster=TRUE, quiet=rdwdquiet(), ...)
+#' @param \dots     Further arguments passed to [stars::read_stars()],
+#'                  [rgdal::readGDAL()] or [rgdal::readGDAL()].
+readDWD.grib2 <- function(
+file,
+pack="terra",
+bargs=NULL,
+toraster=TRUE,
+quiet=rdwdquiet(),
+...)
 {
 checkSuggestedPackage("R.utils", "rdwd:::readDWD.grib2")
-checkSuggestedPackage("rgdal"  , "rdwd:::readDWD.grib2")
 # bunzip arguments:
 bdef <- list(filename=file, remove=FALSE, skip=TRUE)
 bfinal <- berryFunctions::owa(bdef, bargs, "filename")
 # unzip:
 bdata <- do.call(R.utils::bunzip2, bfinal)
-# rgdal reading:
+
+# actual reading:
+# TERRA ---
+if(pack=="terra"){
+if(!quiet) message(" with pack='terra' ...")
+checkSuggestedPackage("terra"  , "rdwd:::readDWD.grib2")
+out <- terra::rast(bdata, ...)
+} else
+# STARS ---
+if(pack=="stars"){
+if(!quiet) message(" with pack='stars' ...")
+checkSuggestedPackage("stars"  , "rdwd:::readDWD.grib2")
+out <- stars::read_stars(bdata, quiet=quiet, ...)
+} else
+# RGDAL ---
+if(pack=="rgdal"){
+if(!quiet) message(" with pack='rgdal' ...")
+checkSuggestedPackage("rgdal"  , "rdwd:::readDWD.grib2")
 out <- if(!quiet)    rgdal::readGDAL(bdata,              ...) else
     suppressWarnings(rgdal::readGDAL(bdata, silent=TRUE, ...))
-# conversion to raster:
 if(toraster) 
   {
   checkSuggestedPackage("raster", "rdwd:::readDWD.grib2 with toraster=TRUE")
   out <- raster::raster(out)
   }
+# WRONG ---
+} else
+tstop("pack='",pack,"' is not a valid option.")
+
 # Output:
 return(invisible(out))
 }
+
+
+
+# ~ pdf ----
+
+#' @title open pdf data
+#' @description open pdf file. This leads to less failures in the new `meta=TRUE`
+#' # system in [selectDWD()].\cr
+#' Intended to be called via [readDWD()].\cr
+#' @return [berryFunctions::openFile()] output
+#' @author Berry Boessenkool, \email{berry-b@@gmx.de}, May 2022.
+#' @seealso [readDWD()]
+#' @examples
+#' \dontrun{ # Excluded from CRAN checks, but run in localtests
+#' link <- selectDWD(res="hourly", var="sun", per="r", meta=TRUE)[2]
+#' file <- dataDWD(link, dir=locdir(), read=FALSE)
+#' readDWD(file)
+#' }
+#' @param file      Name of file on harddrive, like e.g.
+#'                  monthly_kl_historical_DESCRIPTION_obsgermany_climate_monthly_kl_historical_en.pdf
+#' @param quiet     Ignored. DEFAULT: FALSE through [rdwdquiet()]
+#' @param \dots     Further arguments passed to [berryFunctions::openFile()] and from there to [system2()]
+
+readDWD.pdf <- function(file, quiet=rdwdquiet(), ...)
+{
+berryFunctions::openFile(file, ...)
+}
+

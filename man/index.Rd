@@ -35,7 +35,7 @@ at the default \code{base} value \code{\link{dwdbase}}.\cr
 \strong{geoIndex}: \code{metaIndex} distilled to geographic locations.\cr
 \strong{gridIndex}: Vector of file paths at \code{\link{gridbase}}.\cr
 \strong{formatIndex}: (modified) table from
-\url{ftp://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/subdaily/standard_format/formate_kl.html}\cr
+\url{https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/subdaily/standard_format/formate_kl.html}\cr
 }
 \examples{
 data(fileIndex)
@@ -48,6 +48,16 @@ head(geoIndex)
 # in functions, you can use head(rdwd:::fileIndex) etc, but I don't export them
 # because Hadley says 'Never @export a data set' in
 # browseURL("http://r-pkgs.had.co.nz/data.html#data-data")
+
+\dontrun{ # Excluded from CRAN checks to avoid file creation
+
+# To use a custom index, since especially gridfiles names are updated daily:
+# library(rdwd)
+customFolders <- c("monthly/air_temperature_mean","daily/Project_TRY/pressure")
+customFiles <- indexFTP(customFolders, base=gridbase, dir=tempdir())
+customIndex<- createIndex(customFiles, dir=tempdir())
+browseURL("https://bookdown.org/brry/rdwd/fileindex.html")
+}
 
 }
 \seealso{
