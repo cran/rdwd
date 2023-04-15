@@ -40,6 +40,12 @@
 #' selectDWD("Freiburg", res="daily", var="kl", per="rh")
 #' selectDWD("Freiburg", res=c("daily","monthly"), var="kl", per="r")
 #' selectDWD("Freiburg", res=c("daily","monthly"), var="kl", per="hr")
+#' # get old behaviour (needed e.g. in nearbyStations):
+#' ids <- c(3761,3761, 3603)
+#' # all combinations:
+#' selectDWD(id=ids, res="daily", var="kl", per=c("h","r","r")) # 4
+#' # only given combinations:
+#' selectDWD(id=ids, res="daily", var="kl", per=c("h","r","r"), expand=FALSE) # 3
 #' 
 #' # all files in all paths matching id:
 #' head( selectDWD(id=c(1050, 386), res="",var="",per="") ) # 277 files
@@ -61,8 +67,9 @@
 #' }
 #' 
 #' @param name  Char: station name(s) passed to [findID()], along with
-#'              `exactmatch` and `mindex`.
-#'              All 3 arguments are ignored if `id` is given. DEFAULT: ""
+#'              `exactmatch`, `mindex` and `failempty`.
+#'              All 3 arguments are ignored if `id` is given. 
+#'              DEFAULT: "" (all stations at `res/var/per`)
 #' @param res   Char: temporal **res**olution at `base`, e.g.
 #'              `"hourly","daily","monthly"`.
 #'              See section 'Description' above and [`fileIndex`].
@@ -77,13 +84,20 @@
 #'              "historical" (long time series). 
 #'              Can be abbreviated. To get both datasets, use `per="hr"`.
 #'              DEFAULT: NA for interactive selection
+#' @param expand Logical: get all possible `res/var/per` combinations? 
+#'              Set to FALSE if you want only the given combinations.
+#'              If FALSE, they cannot be NA or "".
+#'              DEFAULT: TRUE
 #' @param id    Char/Number: station ID with or without leading zeros, e.g. "00614" or 614.
 #'              Is internally converted to an integer. 
-#'              DEFAULT: [`findID`]`(name, exaxtmatch, mindex)`
+#'              Use NA (the default from `findID`) to get all data at `res/var/per`.
+#'              DEFAULT: [`findID`]`(name, exaxtmatch, mindex, failempty)`
 #' @param exactmatch Logical passed to [findID()]: match `name`
 #'              with [`==`])? Else with [grepl()]. DEFAULT: TRUE
 #' @param mindex Single object: Index with metadata passed to [findID()].
 #'              DEFAULT: [`metaIndex`]
+#' @param failempty Fail if no matching station is found in [findID()]? 
+#'              Avoid downloading all files. DEFAULT: TRUE
 #' @param findex Single object: Index used to select filename, as returned by
 #'              [createIndex()].To use a current / custom index, see `current` and
 #'              <https://bookdown.org/brry/rdwd/fileindex.html>. 
@@ -110,9 +124,11 @@ name="",
 res=NA,
 var=NA,
 per=NA,
-id=findID(name, exactmatch=exactmatch, mindex=mindex, quiet=quiet),
+expand=TRUE,
+id=findID(name, exactmatch=exactmatch, mindex=mindex, quiet=quiet, failempty=failempty),
 exactmatch=TRUE,
 mindex=metaIndex,
+failempty=TRUE,
 findex=fileIndex,
 current=FALSE,
 base=dwdbase,
@@ -155,7 +171,12 @@ if(any(rma, na.rm=TRUE))
  id[rma] <- NA
  var[rma] <- ""
  }
-
+if(!expand)
+ {
+ if(any(is.na(res)|res=="")) tstop("With expand=FALSE, 'res' may not be NA or '' (empty).")
+ if(any(is.na(var)|var=="")) tstop("With expand=FALSE, 'var' may not be NA or '' (empty).")
+ if(any(is.na(per)|per=="")) tstop("With expand=FALSE, 'per' may not be NA or '' (empty).")
+ }
 # update file index if wanted --------------------------------------------------
 if(current)
   {
@@ -209,11 +230,27 @@ select <- function(v) # v = res / var / per
  }
 
 # Actual selection -------------------------------------------------------------
-sel <- if(meta) findex$ismeta else !findex$ismeta
-if(!all(is.na(id))) sel <- sel & findex$id  %in% na.omit(id)
-sel <- select(res)
-sel <- select(var)
-sel <- select(per)
+if(expand)
+{
+  sel <- if(meta) findex$ismeta else !findex$ismeta
+  if(!all(is.na(id))) sel <- sel & findex$id  %in% na.omit(id)
+  sel <- select(res)
+  sel <- select(var)
+  sel <- select(per)
+} else
+{
+  len <- max(length(res),length(var),length(per),length(id))
+  if(any(grepl("minute",res))) twarning("with expand=FALSE, only the first match",
+                                        " is selected for 1/5/10-minute-data.")
+  res <- rep(res, length.out=len)
+  var <- rep(var, length.out=len)
+  per <- rep(per, length.out=len)
+  id  <- rep(id , length.out=len)
+  sel <- sapply(1:len, function(i) which(findex$res==res[i] & 
+                                         findex$var==var[i] & 
+                                         findex$per==per[i] & 
+                                         findex$id == id[i])[1])
+}
 
 # checks + output:
 if(sum(sel)<1 & !quiet) 

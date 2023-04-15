@@ -44,7 +44,6 @@ Usage for observational weather data from the measuring stations usually looks s
 ```R
 # Download and install (once only):
 install.packages("rdwd")
-
 # Load the package into library (needed in every R session):
 library(rdwd)
 
@@ -53,17 +52,25 @@ link <- selectDWD("Potsdam", res="daily", var="kl", per="recent")
 
 # Actually download that dataset, returning the local storage file name:
 file <- dataDWD(link, read=FALSE)
-
 # Read the file from the zip folder:
-clim <- readDWD(file, varnames=TRUE)
+clim <- readDWD(file, varnames=TRUE) # can happen directly in dataDWD
 
 # Inspect the data.frame:
 str(clim)
+# Quick time series graphic:
+plotDWD(clim, "FM.Windgeschwindigkeit")
 ```
 
 For data interpolated onto a 1 km raster, including radar data up to the last hour,
 see the corresponding [chapter](https://bookdown.org/brry/rdwd/raster-data.html) on the website.
 
+
+### App
+Since April 2023, there is an [interactive app](https://brry.shinyapps.io/wetter/) to compare weather periods:
+
+<img src="https://github.com/brry/rdwd/raw/master/misc/app.png" width="577" height="415">
+
+With `rdwd::app()`, you can run this locally with cached data, i.e. faster responses.
 
 ### New to R
 
@@ -99,8 +106,9 @@ install.packages("rdwd", dependencies="Suggests")
 - `data.table`, `bit64` for readDWD(..., fread=TRUE)
 - `raster`, `R.utils`, `ncdf4`, `dwdradar` for readDWD with gridded data
 - `readr` for readDWD.stand(..., fast=TRUE)
-- `knitr`, `rmarkdown`, `testthat`, `roxygen2`, `devtools`, `remotes`, `XML` for local testing, development and documentation
+- `knitr`, `rmarkdown`, `testthat`, `roxygen2`, `devtools`, `remotes`, `XML`, `gsheet` for local testing, development and documentation
 - `leaflet`, `OSMscale`, `sp` for interactive/static maps, see [OSMscale installation tips](https://github.com/brry/OSMscale#installation)
+- `shiny` for the interactive weather comparison app
 
 Note: on Linux (Ubuntu), install `RCurl` via the terminal (CTRL+ALT+T, note lowercase rcurl):
 ```

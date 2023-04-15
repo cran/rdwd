@@ -9,9 +9,12 @@ selectDWD(
   res = NA,
   var = NA,
   per = NA,
-  id = findID(name, exactmatch = exactmatch, mindex = mindex, quiet = quiet),
+  expand = TRUE,
+  id = findID(name, exactmatch = exactmatch, mindex = mindex, quiet = quiet, failempty =
+    failempty),
   exactmatch = TRUE,
   mindex = metaIndex,
+  failempty = TRUE,
   findex = fileIndex,
   current = FALSE,
   base = dwdbase,
@@ -22,8 +25,9 @@ selectDWD(
 }
 \arguments{
 \item{name}{Char: station name(s) passed to \code{\link[=findID]{findID()}}, along with
-\code{exactmatch} and \code{mindex}.
-All 3 arguments are ignored if \code{id} is given. DEFAULT: ""}
+\code{exactmatch}, \code{mindex} and \code{failempty}.
+All 3 arguments are ignored if \code{id} is given.
+DEFAULT: "" (all stations at \code{res/var/per})}
 
 \item{res}{Char: temporal \strong{res}olution at \code{base}, e.g.
 \verb{"hourly","daily","monthly"}.
@@ -42,15 +46,24 @@ DEFAULT: NA for interactive selection}
 Can be abbreviated. To get both datasets, use \code{per="hr"}.
 DEFAULT: NA for interactive selection}
 
+\item{expand}{Logical: get all possible \code{res/var/per} combinations?
+Set to FALSE if you want only the given combinations.
+If FALSE, they cannot be NA or "".
+DEFAULT: TRUE}
+
 \item{id}{Char/Number: station ID with or without leading zeros, e.g. "00614" or 614.
 Is internally converted to an integer.
-DEFAULT: \code{\link{findID}}\verb{(name, exaxtmatch, mindex)}}
+Use NA (the default from \code{findID}) to get all data at \code{res/var/per}.
+DEFAULT: \code{\link{findID}}\verb{(name, exaxtmatch, mindex, failempty)}}
 
 \item{exactmatch}{Logical passed to \code{\link[=findID]{findID()}}: match \code{name}
 with \code{\link{==}})? Else with \code{\link[=grepl]{grepl()}}. DEFAULT: TRUE}
 
 \item{mindex}{Single object: Index with metadata passed to \code{\link[=findID]{findID()}}.
 DEFAULT: \code{\link{metaIndex}}}
+
+\item{failempty}{Fail if no matching station is found in \code{\link[=findID]{findID()}}?
+Avoid downloading all files. DEFAULT: TRUE}
 
 \item{findex}{Single object: Index used to select filename, as returned by
 \code{\link[=createIndex]{createIndex()}}.To use a current / custom index, see \code{current} and
@@ -113,6 +126,12 @@ selectDWD(id="5419", res="daily", var="kl", per="h")
 selectDWD("Freiburg", res="daily", var="kl", per="rh")
 selectDWD("Freiburg", res=c("daily","monthly"), var="kl", per="r")
 selectDWD("Freiburg", res=c("daily","monthly"), var="kl", per="hr")
+# get old behaviour (needed e.g. in nearbyStations):
+ids <- c(3761,3761, 3603)
+# all combinations:
+selectDWD(id=ids, res="daily", var="kl", per=c("h","r","r")) # 4
+# only given combinations:
+selectDWD(id=ids, res="daily", var="kl", per=c("h","r","r"), expand=FALSE) # 3
 
 # all files in all paths matching id:
 head( selectDWD(id=c(1050, 386), res="",var="",per="") ) # 277 files

@@ -11,10 +11,12 @@ readDWD(
   fread = NA,
   format = NA,
   tz = "GMT",
+  hr = 0,
   dividebyten = TRUE,
   var = "",
   progbar = !quiet,
   quiet = rdwdquiet(),
+  quietread = quiet,
   ...
 )
 }
@@ -36,6 +38,10 @@ DEFAULT: NA}
 
 \item{format, tz}{Format and time zone of time stamps, see \code{\link[=readDWD.data]{readDWD.data()}}}
 
+\item{hr}{Integer code to merge historical and recent file.
+Used here, but documented in detail in \code{\link[=readDWD.data]{readDWD.data()}}.
+DEFAULT: 0 (ignore argument)}
+
 \item{dividebyten}{Logical (vector): Divide the values in raster files by ten?
 That way, [1/10 mm] gets transformed to [mm] units.
 Used in \code{\link[=readDWD.radar]{readDWD.radar()}}, \code{\link[=readDWD.raster]{readDWD.raster()}} and \code{\link[=readDWD.asc]{readDWD.asc()}}.
@@ -49,6 +55,10 @@ unless binary files are to be read.
 DEFAULT: !quiet}
 
 \item{quiet}{Logical: suppress messages? DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
+
+\item{quietread}{Logical: suppress message like
+"Reading 1 file with readDWD.data() and fread=TRUE ...".
+DEFAULT: \code{quiet}}
 
 \item{\dots}{Further arguments passed to the internal \verb{readDWD.*}
 subfunctions (see \code{\link{fileType}}) and from those to the

@@ -50,14 +50,10 @@
 #' berryFunctions::monthAxis(1)
 #' 
 #' 
-#' # current and historical files:
+#' # current and historical files, keep historical in the overlap time period:
 #' link <- selectDWD("Potsdam", res="daily", var="kl", per="hr"); link
-#' potsdam <- dataDWD(link, dir=locdir())
-#' potsdam <- do.call(rbind, potsdam) # this will partly overlap in time
+#' potsdam <- dataDWD(link, dir=locdir(), hr=4)
 #' plot(TMK~MESS_DATUM, data=tail(potsdam,1500), type="l")
-#' # The straight line marks the jump back in time
-#' # Keep only historical data in the overlap time period:
-#' potsdam <- potsdam[!duplicated(potsdam$MESS_DATUM),]
 #' 
 #' 
 #' # With many files (>>50), use sleep to avoid getting kicked off the FTP server
@@ -76,10 +72,11 @@
 #'               Needed mostly for data at [`gridbase`].
 #'               DEFAULT: FALSE (selectDWD returns complete URLs already)
 #' @param dir    Char: Writeable directory name where to save the downloaded file.
-#'               Created if not existent. DEFAULT: "DWDdata" at current [getwd()]
+#'               Created if not existent. DEFAULT: [locdir()]
 #' @param force  Logical (vector): always download, even if the file already exists in `dir`?
 #'               Use NA to force re-downloading files older than 24 hours.
 #'               Use a numerical value to force after that amount of hours.
+#'               Use something like `c(Inf, 24)` or `force=c(24*365, 6)`, for per="hr".
 #'               Note: if `force` is not FALSE, the `overwrite` default is TRUE.
 #'               DEFAULT: FALSE
 #' @param overwrite Logical (vector): if force=TRUE, overwrite the existing file
@@ -114,14 +111,13 @@
 #' @param quiet  Logical: suppress message about directory / filenames?
 #'               DEFAULT: FALSE through [rdwdquiet()]
 #' @param \dots  Further arguments passed to [readDWD()],
-#'               like fread, varnames etc. Dots were passed to
-#'               [download.file()] prior to rdwd 0.11.7 (2019-02-25)
+#'               like `fread`, `varnames`, `hr`, etc.
 #
 dataDWD <- function(
 url,
 base=dwdbase,
 joinbf=FALSE,
-dir="DWDdata",
+dir=locdir(),
 force=FALSE,
 overwrite=!isFALSE(force),
 read=TRUE,
@@ -140,8 +136,6 @@ quiet=rdwdquiet(),
 if(!is.null(file)) tstop("The argument 'file' has been renamed to 'url' with rdwd version 1.3.34, 2020-07-28")
 if(!is.atomic(url)) tstop("url must be a vector, not a ", class(url))
 if(!is.character(url)) tstop("url must be char, not ", class(url))
-if(missing(dir)) twarning("In late 2022, dir will default to locdir(). ",
-                         "From then on, use dir='DWDdata' explicitely to store in a project-specific folder.")
 base <- sub("/$","",base) # remove accidental trailing slash
 url <- sub("^/","",url) # remove accidental leading slash
 if(joinbf)  url <- paste0(base,"/",url)

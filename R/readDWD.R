@@ -41,6 +41,9 @@
 #' @param fread  Logical (vector): read fast? Used in [readDWD.data()].
 #'               DEFAULT: NA
 #' @param format,tz Format and time zone of time stamps, see [readDWD.data()]
+#' @param hr     Integer code to merge historical and recent file. 
+#'               Used here, but documented in detail in [readDWD.data()].
+#'               DEFAULT: 0 (ignore argument)
 #' @param dividebyten Logical (vector): Divide the values in raster files by ten?
 #'               That way, \[1/10 mm] gets transformed to \[mm] units.
 #'               Used in [readDWD.radar()], [readDWD.raster()] and [readDWD.asc()].
@@ -51,6 +54,9 @@
 #'               unless binary files are to be read.
 #'               DEFAULT: !quiet
 #' @param quiet  Logical: suppress messages? DEFAULT: FALSE through [rdwdquiet()]
+#' @param quietread Logical: suppress message like 
+#'               "Reading 1 file with readDWD.data() and fread=TRUE ...".
+#'               DEFAULT: `quiet`
 #' @param \dots  Further arguments passed to the internal `readDWD.*`
 #'               subfunctions (see [`fileType`]) and from those to the 
 #'               underlying actual reading functions
@@ -62,10 +68,12 @@ varnames=FALSE,
 fread=NA,
 format=NA,
 tz="GMT",
+hr=0,
 dividebyten=TRUE,
 var="",
 progbar=!quiet,
 quiet=rdwdquiet(),
+quietread=quiet,
 ...
 )
 {
@@ -77,10 +85,11 @@ wrongtype <- !type %in% validFileTypes # should be caught by fileType, but just 
 if(any(wrongtype)) tstop("invalid type (",type[wrongtype][1],") given for file '",
                          file[wrongtype][1],"'. See  ?fileType")
 
-
-# fast reading with fread:
 if("data" %in% type)
 {
+if(!is.numeric(hr)) tstop("hr must be an integer, not ", toString(class(hr)), 
+                          " with the value ", toString(hr))
+# fast reading with fread:
 if(anyNA(fread))
   {
   haspack <- requireNamespace("data.table", quietly=TRUE)
@@ -99,7 +108,7 @@ if(any(fread))
                                      "See   https://bookdown.org/brry/rdwd/fread.html")
   }
 } 
-# end fread / unzip checks
+# end hr + fread / unzip checks
 
 if(len>1)
   {
@@ -128,7 +137,7 @@ if(!grepl(pattern="german", lct, ignore.case=TRUE))
 }
 
 # subfunctions message:
-if(!quiet)
+if(!quietread)
 {
 nt <- function(x, pre="readDWD.", post="()") # nt: nice table
   {
@@ -167,7 +176,42 @@ output <- lapply(seq_along(file), readDWDloopfun, ...)
 
 names(output) <- tools::file_path_sans_ext(basename(file))
 output <- if(length(file)==1) output[[1]] else output
-return(invisible(output))
+output <- invisible(output)
+
+# hr for merging historical + recent data:
+if("data" %in% type && hr>0){
+if(!quiet) message("merging historical and recent file.")
+h <- grep("historical", names(output), fixed=TRUE)
+if(length(h)<1) tstop("hr=", hr, ", but ", length(h), " files have 'historical' in the name (must be 1).")
+if(length(h)!=1) 
+{
+fn <- basename(file[h])
+fnp <- strsplit(fn,"_")[[1]] # fnp: file name path
+# fnp <- paste0(fnp[1],"/",fnp[2],"/",substr(fnp[3],1,1))
+fnp <- paste(fnp[1:2], collapse="/")
+fnid <- as.numeric(sub("\\D*(\\d{5}).*", "\\1", fn)) # first five digits after non-digits
+fnid <- unique(fnid)
+if(length(fnid)>1) tstop("hr=", hr, ", but ", length(fnid), " ids are given:", 
+                         truncMessage(fnid, prefix=""))
+fny <- sub(".*(\\d{8}).*(\\d{8})\\D*$", "\\1-\\2", fn) # fn years
+fnu <- base::lapply(strsplit(fny,"-"), as.Date, format="%Y%m%d") # fn to be used
+fnu <- which.max(sapply(fnu, diff))
+twarning("For ID '",fnid,"' at path '",fnp,"', ",length(h)," files have 'historical' in the name.\n",
+         "Using longest range ",fny[fnu]," (not ",toString(fny[-fnu]),"). ",
+         "Use hr=0 to read all data.")
+h <- h[fnu] # for selection in output[c(h,r)]
+}
+r <- grep("recent", names(output), fixed=TRUE)
+if(length(r)!=1) tstop("hr=", hr, ", but ", length(r), " files have 'recent' in the name (must be 1).")
+output <- output[c(h,r)] # to have the right order
+output <- do.call(rbind, output) # historical and recent data
+if(hr>=2) output <- output[!duplicated(output$MESS_DATUM),] # keep only hist for overlap
+if(hr>=2) rownames(output) <- NULL
+if(hr>=3) output[,c("QN_3", "QN_4", "eor")] <- NULL # unneeded columns
+if(hr>=4) output$STATIONS_ID <- NULL
+} # End of hr merging
+
+return(output)
 }
 
 
@@ -206,11 +250,22 @@ return(invisible(output))
 #' @param tz       Char (vector): time zone for [as.POSIXct()].
 #'                 "" is the current time zone, and "GMT" is UTC (Universal Time,
 #'                 Coordinated). DEFAULT: "GMT"
+#' @param hr       Integer code to automatically merge historical and recent datasets.
+#'                 If set, `readDWD` returns a data.frame instead of a list.
+#'                 If multiple historical files are present, 
+#'                 the longest date range (per file name) is used.
+#'                 This is not actually used in `readDWD.data`, but in [readDWD()].\cr
+#'                 0 (default): ignore this argument\cr
+#'                 1: sort by hr (if given) + merge\cr
+#'                 2: also remove duplicated dates from recent\cr
+#'                 3: also remove columns QN3,QN4,eor\cr
+#'                 4: also remove column STATIONS_ID\cr
+#'                 DEFAULT: 0
 #' @param quiet    Suppress empty file warnings?
 #'                 DEFAULT: FALSE through [rdwdquiet()]
 #' @param \dots    Further arguments passed to [read.table()] or [data.table::fread()]
 readDWD.data <- function(file, fread=FALSE, varnames=FALSE, format=NA, tz="GMT",
-                         quiet=rdwdquiet(), ...)
+                         hr=0, quiet=rdwdquiet(), ...)
 {
 if(grepl("meta_data_Meta_Daten", file)) tstop("This 'meta_data_Meta_Daten' file should be read with readMeta(",file,")")
 if(fread)
@@ -398,7 +453,9 @@ out
 #' @examples
 #' \dontrun{ # Excluded from CRAN checks, but run in localtests
 #' 
-#' link <- selectDWD(id=10381, res="subdaily", var="standard_format", per="r")
+#' link <- selectDWD(res="subdaily", var="standard_format", per="r")
+#' link <- link[grepl("10381", link, fixed=TRUE)]
+#' # Not ID, according to meta data, hence no longer in column id (2023-04).
 #' file <- dataDWD(link, dir=locdir(), read=FALSE)
 #' sf <- readDWD(file)
 #' 
@@ -456,7 +513,7 @@ if(fast)
   checkSuggestedPackage("readr", "readDWD.stand with fast=TRUE")
   coltypes <- readr::cols(X22=readr::col_character()) # 22 is S column
   # if not specified, will guess logical and then complain about character input later in file
-  sf <- readr::read_fwf(file, readr::fwf_widths(width), col_types=coltypes, ...)
+  sf <- readr::read_fwf(file, readr::fwf_widths(width), col_types=coltypes, progress=FALSE)
   sf <- data.frame(sf) # loose tibble attributes and printing methods
   # mimick read.fwf behaviour:
   sf[is.na(sf)] <- " " # to avoid NA comparison
@@ -1052,16 +1109,21 @@ return(invisible(dat))
 #' @seealso [readDWD.binary()], radar locations from \url{https://www.dwd.de/DE/leistungen/radarklimatologie/radklim_kompositformat_1_0.pdf?__blob=publicationFile&v=1}
 #' @examples
 #' \dontrun{ # Excluded from CRAN checks, but run in localtests
-#' yw_link <- "/5_minutes/radolan/reproc/2017_002/bin/2020/YW2017.002_202006.tar"
+#' yw_link <- "/5_minutes/radolan/reproc/2017_002/bin/2022/YW2017.002_202203.tar"
+#' # 202006 has untar error on Mac, 2023-04, maybe due to incomplete download
 #' yw_file <- dataDWD(url=yw_link, base=gridbase, joinbf=TRUE, dir=locdir(), read=FALSE)
-#' x <- readDWD(yw_file, selection=3641:3644) 
+#' # 207 MB
+#' x <- readDWD(yw_file, selection=3641:3644)
 #' # 00:30 for tar files, 01:40 for unpacking. 
 #' # If you need a preselection argument, let me know.
 #' raster::plot(x$dat)
 #'
 #' f <- system.file("tests//raa01-yw2017.002_10000-2006131525-dwd---bin", package="dwdradar")
-#' if(f=="") stop("dwdradar test file not found")
 #' # https://stackoverflow.com/a/72207233/1587132 on how to install with tests folder
+#' if(!file.exists(f)) f <- paste0("/Users/berry/Dropbox/Rpack/dwdradar/tests/",
+#'                                 "raa01-yw2017.002_10000-2006131525-dwd---bin")
+#' # Clone from https://github.com/brry/dwdradar
+#' if(!file.exists(f)) stop("dwdradar test file not found")
 #' 
 #' x <- dwdradar::readRadarFile(f)
 #' x$dat <- raster::raster(x$dat)
@@ -1223,6 +1285,7 @@ return(invisible(list(dat=rbmat, meta=rbmeta)))
 #'                  One of "terra" (the default), "stars"
 #'                  or "rgdal" (for the deprecated cosmo-d2 data). 
 #'                  See [issue](https://github.com/brry/rdwd/issues/28).
+#'                  "rgdal" will be deprecated in 2023.
 #'                  DEFAULT: "terra"
 #' @param bargs     Named list of arguments passed to
 #'                  [R.utils::bunzip2()], see `gargs` in [readDWD.raster()]. DEFAULT: NULL
@@ -1232,8 +1295,8 @@ return(invisible(list(dat=rbmat, meta=rbmeta)))
 #' @param quiet     Silence readGDAL completely, including warnings on 
 #'                  discarded ellps / datum. 
 #'                  DEFAULT: FALSE through [rdwdquiet()]
-#' @param \dots     Further arguments passed to [stars::read_stars()],
-#'                  [rgdal::readGDAL()] or [rgdal::readGDAL()].
+#' @param \dots     Further arguments passed to [terra::rast()] or
+#'                  [stars::read_stars()].
 readDWD.grib2 <- function(
 file,
 pack="terra",
@@ -1266,6 +1329,8 @@ out <- stars::read_stars(bdata, quiet=quiet, ...)
 if(pack=="rgdal"){
 if(!quiet) message(" with pack='rgdal' ...")
 checkSuggestedPackage("rgdal"  , "rdwd:::readDWD.grib2")
+warning("rgdal is retiring (https://r-spatial.org/r/2022/04/12/evolution.html). 
+        This option will be removed in 2023. Use pack='terra' or 'stars'.")
 out <- if(!quiet)    rgdal::readGDAL(bdata,              ...) else
     suppressWarnings(rgdal::readGDAL(bdata, silent=TRUE, ...))
 if(toraster) 

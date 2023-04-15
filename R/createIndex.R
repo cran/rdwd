@@ -22,9 +22,11 @@
 #' @export
 #' @examples
 #' \dontrun{ # Not tested with R CMD check because of file writing
-#' link <- "daily/kl/historical/tageswerte_00699_19490101_19580630_hist.zip"
+#' link <- "daily/kl/historical/tageswerte_KL_00699_19490101_19580630_hist.zip"
 #' ind <- createIndex(link, dir=tempdir())
 #' ind
+#' # res  var        per  id    start          end ismeta
+#' # daily kl historical 699 1949-01-01 1958-06-30 FALSE
 #' link2 <- "daily/kl/historical/KL_Tageswerte_Beschreibung_Stationen.txt"
 #' link3 <- "daily/kl/recent/KL_Tageswerte_Beschreibung_Stationen.txt"
 #' ind2 <- createIndex(c(link,link2,link3), dir=tempdir(), meta=TRUE, checkwarn=FALSE)
@@ -82,74 +84,99 @@ quiet=rdwdquiet(),
 compstart <- Sys.time()
 messaget <- function(x) message(x, " (",
           round(difftime(Sys.time(), compstart, units="s")), " secs so far)")
+# overview of all index variants:
+# dd <- unlist(pblapply(unique(dirname(paths)), function(p){
+#  f <- paths[startsWith(paths,paste0(p,"/"))]
+#  f <- f[tools::file_ext(f)!="pdf"]
+#  f <- f[tools::file_ext(f)!="html"]
+#  f <- f[!grepl("Beschreibung",f, fixed=TRUE)]
+#  f <- f[!duplicated(tools::file_ext(f))]
+#  f
+#  }))
+# sc <- stringr::str_count(dd, "/")
+# dd <- dd[c(which(sc==2), which(sc==4), which(sc==3))]
+# dd <- dd[-which(startsWith(dd,"1_minute"))[-1]]
+# dd <- dd[-which(startsWith(dd,"5_minute"))[-1]]
+# clipr::write_clip(dd)
+# https://docs.google.com/spreadsheets/d/1qXQ1bSLW5TJnJgpUXIID3mVNYS6YZaHbsoe22LmBIAk/edit#gid=0
+
 # All paths should have the same amount of levels before being splitted:
-fileIndex <- gsub("y/solar/", "y/solar//", paths) # hourly and daily only
-#fileIndex <- gsub("solar//ignore", "solar/ignore", fileIndex)
-fileIndex <- gsub("multi_annual/", "multi_annual//", fileIndex)
-fileIndex <- gsub("subdaily/standard_format/", "subdaily/standard_format//", fileIndex)
-# remove leading slashes:
+err <- "1_minute/precipitation/historical/2021/1minutenwerte_nieder1minutenwerte_nieder_000_hist.zip"
+paths <- paths[paths!=err] ; rm(err)
+fileIndex <- paths
+s <- function(pat, rep) sub(pat, rep, fileIndex, fixed=TRUE)
+fileIndex <- s("y/solar/", "y/solar//") # only hourly + daily, not the others
+fileIndex <- s("multi_annual/", "multi_annual//")
+fileIndex <- s("subdaily/standard_format/", "subdaily/standard_format//")
+fileIndex <- s( "1_minute/precipitation/historical/", "1_minute/precipitation/historical|")
+fileIndex <- s("5_minutes/precipitation/historical/","5_minutes/precipitation/historical|")
+fileIndex <- s("climate_indices/","climate_indices|")
+rm(s)
+ # remove leading slashes:
 fileIndex <- sub("^/","",fileIndex)
-prec1min <- substr(fileIndex,1,33) == "1_minute/precipitation/historical"
-prec1min <- substr(fileIndex,1,37) != "1_minute/precipitation/historical/ein" & prec1min
-any1min <- any(prec1min)
-ncolumns <- 4 + any1min # supposed number of columns: 4, 5 if any prec1min in paths
 # split into parts:
 if(!quiet) messaget("Splitting filenames...")
-fileIndex <- berryFunctions::l2df(pbapply::pblapply(fileIndex,function(x) strsplit(x,"/")[[1]]))
-# check if there are actually 4/5 columns (might be different with non-standard base)
-if(ncol(fileIndex)!=ncolumns) tstop("index does not have ", ncolumns," columns, but ", ncol(fileIndex))
-if(any1min) fileIndex[prec1min,4] <- fileIndex[prec1min,5]
-colnames(fileIndex) <- c("res","var","per","file",if(any1min) "dummyfromyear1minute")
+fileIndex <- strsplit(fileIndex,"/", fixed=TRUE)
+# check if there are actually 4 columns:
+ln4 <- lengths(fileIndex)!=4
+if(any(ln4)) tstop("paths should have 4 elements (res/var/per/file), not ", 
+                   toString(unique(lengths(fileIndex)[ln4])))
+rm(ln4)
+fileIndex <- data.frame(t(simplify2array(fileIndex))) # much faster than l2df
+colnames(fileIndex) <- c("res","var","per","file")
 file <- fileIndex$file
-fileIndex <- fileIndex[,1:3] # file will be re-attached (with path) as the last column
+fileIndex <- fileIndex[,1:3] # 'path' will be re-attached as the last column
+fileIndex$per[startsWith(fileIndex$per, "historical|")] <- "historical"
+fileIndex$var[startsWith(fileIndex$var, "climate_indices|")] <- "climate_indices"
 #
 # Get detailed info from file name elements:
-if(!quiet) messaget("Extracting metadata from filenames...")
-info <- berryFunctions::l2df(pbapply::pblapply(file, function(x) rev(strsplit(x, "[-_.]")[[1]])))
-# Station ID (identification number):
-id <- ""
-per <- fileIndex$per
-sol <- fileIndex$var=="solar"
-zip <- info[,1]=="zip"
-if(!quiet) messaget("Extracting station IDs from filenames...")
-id <- ifelse(zip & per=="historical"       , info[,5], id)
-id <- ifelse(zip & per=="recent"           , info[,3], id)
-id <- ifelse(zip & per=="now"              , info[,3], id)
-id <- ifelse(zip & sol & per!="historical" , info[,3], id) # var==solar
-id <- ifelse(zip & per=="meta_data"        , info[,2], id)
-id <- ifelse(substr(file,1,2)=="kl", substr(file,4,8), id) # res==subdaily
-id <- ifelse(info[,1]=="gz"&info[,2]=="txt", info[,3], id) # /CDC/derived_germany/soil/daily/historical/ 
-fileIndex$id <- suppressWarnings(as.integer(id))
-rm(id, per, sol, zip)
-#
+if(!quiet) messaget("Extracting station IDs + time range from filenames...")
+now <- grepl("akt.zip",file,fixed=TRUE) | grepl("now.zip",file,fixed=TRUE) | 
+       grepl("row.zip",file,fixed=TRUE)
+# /CDC/derived_germany/soil/daily/historical/derived_germany_soil_daily_historical_1001.txt.gz
+deriv <- grepl("derived_germany",file,fixed=TRUE)
+selmeta <- which(tools::file_ext(file) == "zip" & fileIndex$per!="meta_data" & !now & !deriv)
+filesel <- file[selmeta]
+filesel <- sub("wetter_tageswerte_RR", "wetter_tageswerte|RR", filesel, fixed=TRUE)
+filesel <- sub("extrema_temp", "extrema|temp", filesel, fixed=TRUE)
+filesel <- sub("extrema_wind", "extrema|wind", filesel, fixed=TRUE)
+filesel <- strsplit(filesel, "_", fixed=TRUE)
+# info <- l2df(filesel) ; View(info[grepl("\\D",info$V5),])
+fileIndex$id    <- "" # Station ID (identification number)
+fileIndex$start <- ""
+fileIndex$end   <- ""
+if(length(filesel)>=1){
+fileIndex$id   [selmeta] <- sapply(filesel, "[", 3)
+fileIndex$start[selmeta] <- sapply(filesel, "[", 4)
+fileIndex$end  [selmeta] <- sapply(filesel, "[", 5)
+}
+selmeta <- fileIndex$per=="meta_data"
+fileIndex$id[selmeta] <-sub(".*_(\\d*)\\.zip"       , "\\1", basename(file[selmeta]))
+fileIndex$id[now] <-    sub(".*_(\\d*)_\\D{3}\\.zip", "\\1", basename(file[now])    )
+fileIndex$id[deriv] <-  sub(".*_(\\d*)\\.txt\\.gz"  , "\\1", basename(file[deriv])  )
+rm(selmeta, deriv, now, file, filesel)
+fileIndex$id <- suppressWarnings(as.integer(fileIndex$id))
+fileIndex$start <- as.Date(fileIndex$start, "%Y%m%d")
+fileIndex$end   <- as.Date(fileIndex$end, "%Y%m%d")
+fileIndex$start <- replace(fileIndex$start, is.na(fileIndex$start), "")
+fileIndex$end   <- replace(fileIndex$end  , is.na(fileIndex$end  ), "")
 # standard_format hist/recent
 sf <- fileIndex$var=="standard_format" & fileIndex$per==""
-fileIndex[sf & grepl("akt.txt", paths), "per"] <- "recent"
-fileIndex[sf & grepl("_bis_"  , paths), "per"] <- "historical"
+fileIndex[sf & grepl("akt.txt", paths, fixed=TRUE), "per"] <- "recent"
+fileIndex[sf & grepl("_bis_"  , paths, fixed=TRUE), "per"] <- "historical"
+rm(sf)
 #
-# start and end of time series (according to file name):
-if(!quiet) messaget("Extracting time series range from filenames...")
-ziphist <- fileIndex$per=="historical"  & info[,1]=="zip"
-multi <-  fileIndex$res=="multi_annual" & info[,1]=="txt" & info[,3]!="Stationsliste"
-# actual selection:
-fileIndex$start <- ""
-fileIndex$start <- ifelse(ziphist|multi, info[,4], fileIndex$start)
-fileIndex$start <- as.Date(fileIndex$start, "%Y%m%d")
-# Analogous for end:
-fileIndex$end <- ""
-fileIndex$end <- ifelse(ziphist|multi, info[,3], fileIndex$end)
-fileIndex$end <- as.Date(fileIndex$end, "%Y%m%d")
-#
+if(!quiet) messaget("Determining if files contain meta data...")
 # is the file a metafile?
 ma <- fileIndex$res=="multi_annual"
-ismeta1 <- !ma & grepl('.txt$', paths) & grepl("Beschreibung", paths)
-ismeta2 <-  ma & grepl("Stationsliste", paths)
-ismeta3 <- grepl("meta_data/Meta_Daten", paths)
-ismeta4 <- grepl('.pdf$', paths) | grepl('.html$', paths)
+ismeta1 <- !ma & endsWith(paths,'.txt') & grepl("Beschreibung", paths, fixed=TRUE)
+ismeta2 <-  ma & grepl("Stationsliste", paths, fixed=TRUE)
+ismeta3 <- grepl("meta_data/Meta_Daten", paths, fixed=TRUE)
+ismeta4 <- endsWith(paths,'.pdf')  | endsWith(paths,'.html')
 fileIndex$ismeta <- ismeta1 | ismeta2 | ismeta3 | ismeta4
 rm(ma, ismeta1, ismeta2, ismeta3, ismeta4)
 #
-# Append path for accurate file reading later on, e.g. with dataDWD:
+# Append original paths for accurate file reading later on, e.g. with dataDWD:
 fileIndex$path <- paths
 rownames(fileIndex) <- NULL
 #
@@ -166,15 +193,10 @@ if(!isTRUE(meta)) return(invisible(fileIndex))
 #
 #
 # metaIndex --------------------------------------------------------------------
+if(!quiet) messaget("Generating metaIndex...")
 # select Beschreibung_.txt files only:
-sel <- grepl('.txt$', fileIndex$path)
-sel <- sel & grepl("Beschreibung_Stationen", fileIndex$path)
-# sel <- sel & fileIndex$res != "subdaily" # has different columns
-#sel <- sel & fileIndex$res %in% c("monthly","daily","hourly")
-# manual correction March 2018 for duplicate description files:
-#descdupli <- basename(paths)=="ein_min_rr_Beschreibung_Stationen.txt" & grepl("/20", dirname(paths))
-#sel <- sel & !descdupli
-
+sel <- endsWith(fileIndex$path, '.txt')
+sel <- sel & grepl("Beschreibung_Stationen", fileIndex$path, fixed=TRUE)
 if(sum(sel)<2) tstop("There need to be at least two 'Beschreibung' files. (There is ",sum(sel),")")
 # download and read those files:
 metas <- dataDWD(fileIndex[sel, "path"], base=base, joinbf=TRUE, dir=metadir,
@@ -216,6 +238,7 @@ metaIndex$hasfile <- metaComb  %in% fileComb
 # convert date columns to date:
 metaIndex$von_datum <- as.Date(as.character(metaIndex$von_datum),"%Y%m%d")
 metaIndex$bis_datum <- as.Date(as.character(metaIndex$bis_datum),"%Y%m%d")
+# hist files end date too recent: not my fault, is in DWD Beschreibung files
 
 # Write to disc
 if(mname!="")
@@ -281,7 +304,7 @@ geoIndex <- geoIndex[!duplicated(geoIndex), ]  #  ca 6k rows (=unique station ID
 #
 # column for interactive map popup display:
 geoIndex$display <- rowDisplay(geoIndex)
-geoIndex$display <- gsub("nfiles", "n public files", geoIndex$display)
+geoIndex$display <- gsub("nfiles", "n public files", geoIndex$display, fixed=TRUE)
 # colors for map:
 geoIndex$col <- "blue"
 geoIndex$col[!geoIndex$recentfile] <- "red"

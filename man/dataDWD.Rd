@@ -8,7 +8,7 @@ dataDWD(
   url,
   base = dwdbase,
   joinbf = FALSE,
-  dir = "DWDdata",
+  dir = locdir(),
   force = FALSE,
   overwrite = !isFALSE(force),
   read = TRUE,
@@ -36,11 +36,12 @@ Needed mostly for data at \code{\link{gridbase}}.
 DEFAULT: FALSE (selectDWD returns complete URLs already)}
 
 \item{dir}{Char: Writeable directory name where to save the downloaded file.
-Created if not existent. DEFAULT: "DWDdata" at current \code{\link[=getwd]{getwd()}}}
+Created if not existent. DEFAULT: \code{\link[=locdir]{locdir()}}}
 
 \item{force}{Logical (vector): always download, even if the file already exists in \code{dir}?
 Use NA to force re-downloading files older than 24 hours.
 Use a numerical value to force after that amount of hours.
+Use something like \code{c(Inf, 24)} or \code{force=c(24*365, 6)}, for per="hr".
 Note: if \code{force} is not FALSE, the \code{overwrite} default is TRUE.
 DEFAULT: FALSE}
 
@@ -87,8 +88,7 @@ before they get truncated with message "(and xx more)". DEFAULT: 2}
 DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
 
 \item{\dots}{Further arguments passed to \code{\link[=readDWD]{readDWD()}},
-like fread, varnames etc. Dots were passed to
-\code{\link[=download.file]{download.file()}} prior to rdwd 0.11.7 (2019-02-25)}
+like \code{fread}, \code{varnames}, \code{hr}, etc.}
 }
 \value{
 Presuming downloading and processing were successful:
@@ -129,14 +129,10 @@ plot(wind$MESS_DATUM, wind$F, main="DWD hourly wind Fuerstenzell", col="blue",
 berryFunctions::monthAxis(1)
 
 
-# current and historical files:
+# current and historical files, keep historical in the overlap time period:
 link <- selectDWD("Potsdam", res="daily", var="kl", per="hr"); link
-potsdam <- dataDWD(link, dir=locdir())
-potsdam <- do.call(rbind, potsdam) # this will partly overlap in time
+potsdam <- dataDWD(link, dir=locdir(), hr=4)
 plot(TMK~MESS_DATUM, data=tail(potsdam,1500), type="l")
-# The straight line marks the jump back in time
-# Keep only historical data in the overlap time period:
-potsdam <- potsdam[!duplicated(potsdam$MESS_DATUM),]
 
 
 # With many files (>>50), use sleep to avoid getting kicked off the FTP server
