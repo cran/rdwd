@@ -25,17 +25,17 @@ DWDdata/grids_germany/daily/Project_TRY/humidity/RH_199509_daymean.nc.gz}
 an interactive selection is presented.
 DEFAULT: "" (last variable)}
 
-\item{toraster}{Read file with \code{\link[raster:brick]{raster::brick()}}?
+\item{toraster}{Read file with \code{\link[terra:rast]{terra::rast()}}?
 All further arguments will be ignored. Specify e.g. \code{var}
 through \dots as \code{varname}. DEFAULT: TRUE}
 
 \item{quiet}{Logical: Suppress time conversion failure warning?
 DEFAULT: FALSE through \code{\link[=rdwdquiet]{rdwdquiet()}}}
 
-\item{\dots}{Further arguments passed to \code{\link[raster:brick]{raster::brick()}} or \code{\link[ncdf4:nc_open]{ncdf4::nc_open()}}}
+\item{\dots}{Further arguments passed to \code{\link[terra:rast]{terra::rast()}} or \code{\link[ncdf4:nc_open]{ncdf4::nc_open()}}}
 }
 \value{
-\code{\link[raster:brick]{raster::brick()}} object. Alternatively,
+\code{\link[terra:rast]{terra::rast()}} object. Alternatively,
 if toraster=FALSE, a list with time, lat, lon, var, varname, file and cdf.
 \strong{cdf} is the output of \code{\link[ncdf4:nc_open]{ncdf4::nc_open()}}.
 }
@@ -53,25 +53,24 @@ url <- "daily/Project_TRY/pressure/PRED_199606_daymean.nc.gz"  #  5 MB
 url <- "daily/Project_TRY/humidity/RH_199509_daymean.nc.gz"    # 25 MB
 file <- dataDWD(url, base=gridbase, joinbf=TRUE, dir=locdir(), read=FALSE)
 nc <- readDWD(file)
-ncp <- plotRadar(nc, main=paste(nc@title, nc@z[[1]]), layer=1:3,
+ncp <- plotRadar(nc, main=paste(terra::longnames(nc), terra::time(nc)), layer=1:3,
                  col=seqPal(), proj="nc", extent="nc")
-str(nc, max.level=2)
 
-raster::values(nc[[1]]) # obtain actual values into memory
+str(terra::values(nc[[1]])) # obtain actual values into memory
 
-raster::plot(nc[[1]]) # axes 0:938 / 0:720, the number of grid cells
-raster::plot(ncp[[1]])# properly projected, per default onto latlon
+terra::plot(nc[[1]]) # axes 0:938 / 0:720, the number of grid cells
+terra::plot(ncp[[1]])# properly projected, per default onto latlon
 
-rng <- range(raster::cellStats(nc[[1:6]], "range"))
-raster::plot(nc, col=seqPal(), zlim=rng, maxnl=6)
+rng <- range(terra::global(nc[[1:6]], "range", na.rm=TRUE))
+terra::plot(nc, col=seqPal(), zlim=rng, maxnl=6)
 
-# Array instead of raster brick:
+# Array instead of terra rast:
 nc <- readDWD(file, toraster=FALSE)
 image(nc$var[,,1], col=seqPal(), asp=1.1)
 colPointsLegend(nc$var[,,1], title=paste(nc$varname, nc$time[1]))
 
 # interactive selection of variable:
-# nc <- readDWD(file, var="-") # uncommented to not block automated tests
+# nc <- readDWD(file, toraster=FALSE, var="-") # commented out to not block automated tests
 str(nc$var)
 }
 }

@@ -18,7 +18,7 @@ DWDdata/multi_annual_mean_81-10_Temperatur_1981-2010_aktStandort.txt or
 DWDdata/multi_annual_mean_81-10_Temperatur_1981-2010_Stationsliste_aktStandort.txt}
 
 \item{fileEncoding}{\code{\link[=read.table]{read.table()}} file encoding.
-DEFAULT: "latin1" (needed on Linux, optional but not hurting on windows)}
+DEFAULT: "latin1"}
 
 \item{comment.char}{\code{\link[=read.table]{read.table()}} comment character.
 DEFAULT: "\\032" (needed 2019-04 to ignore the binary
@@ -43,11 +43,10 @@ subdaily/standard_format data.
 \dontrun{ # Excluded from CRAN checks, but run in localtests
 
 # Temperature aggregates (2019-04 the 9th file, 2022-05 the 8th):
-durl <- selectDWD(res="multi_annual", var="mean_81-10", per="")[8]
-murl <- selectDWD(res="multi_annual", var="mean_81-10", per="", meta=TRUE)[8]
-
-ma_temp <- dataDWD(durl, dir=locdir())
-ma_meta <- dataDWD(murl, dir=locdir())
+durl <- selectDWD(res="multi_annual", per="mean_81-10")[8]
+murl <- selectDWD(res="multi_annual", per="mean_81-10", meta=TRUE)[8]
+ma_temp <- dataDWD(durl, fileEncoding="")
+ma_meta <- dataDWD(murl, fileEncoding="")
 
 head(ma_temp)
 head(ma_meta)
@@ -65,12 +64,12 @@ par(op)
 par(bg=8)
 berryFunctions::colPoints(ma$geogr..Laenge, ma$geogr..Breite, ma$Jahr, add=F, asp=1.4)
 
-load(system.file("extdata/DEU.rda", package="rdwd"))
+DEU <- terra::vect(system.file("extdata/DEU.gpkg", package="rdwd"))
 pdf("MultiAnn.pdf", width=8, height=10)
 par(bg="grey90")
 for(m in colnames(ma)[8:19])
   {
-  raster::plot(DEU, border="grey40")
+  terra::plot(DEU, border="grey40")
   berryFunctions::colPoints(ma[-262,]$geogr..Laenge, ma[-262,]$geogr..Breite, ma[-262,m],
                             asp=1.4, # Range=range(ma[-262,8:19]),
                             col=berryFunctions::divPal(200, rev=TRUE), zlab=m, add=T)

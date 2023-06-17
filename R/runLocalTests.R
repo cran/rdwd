@@ -109,14 +109,14 @@ trr <- function(file, ext="radolan", readdwd=FALSE) # trr: test reading radar da
   main <- deparse(substitute(file))
   file2 <- berryFunctions::packagePath(file=paste0("misc/",file))
   rrf <- if(readdwd) readDWD(file2, toraster=FALSE) else dwdradar::readRadarFile(file2)
-  rrr <- raster::raster(rrf$dat)
+  rrr <- terra::rast(rrf$dat)
   rrp <- projectRasterDWD(rrr, extent=ext)
-  raster::plot(rrr, main="\nOriginal")
-  raster::plot(rrp, main="\nProjected")
+  terra::plot(rrr, main="\nOriginal")
+  terra::plot(rrp, main="\nProjected")
   addBorders()
   title(main=main, outer=TRUE, line=-1.1)
-  rngr <- range(raster::cellStats(rrr, "range"))
-  rngp <- range(raster::cellStats(rrp, "range"))
+  rngr <- range(terra::minmax(rrr))
+  rngp <- range(terra::minmax(rrp))
   return(list(file=file2, rrp=rrp, meta=rrf$meta, range_orig=rngr, range_proj=rngp))
   }
 pdf(paste0(dir_exmpl,"/Radartests.pdf"), width=10, height=7)
@@ -126,10 +126,10 @@ w2 <- trr("raa01-rw_10000-1907311350-dwd---bin_hourRadRecentBin.gz", readdwd=TRU
 rw <- trr("raa01-rw_10000-1907010950-dwd---bin_weatherRadolan")
 sf <- trr("raa01-sf_10000-1605010450-dwd---bin_dailyRadHist")
 rx <- trr("raa01-rx_10000-1605290600-dwd---bin_Braunsbach")
-rx1 <- raster::raster(dwdradar::readRadarFile(rx$file)$dat)
+rx1 <- terra::rast(dwdradar::readRadarFile(rx$file)$dat)
 rx2 <- projectRasterDWD(rx1, targetproj=NULL)
-raster::plot(rx2, main="\nProjected without latlon")
-raster::plot(rx$rrp, zlim=rx$range_orig, main="\nProjected, with custom zlim")
+terra::plot(rx2, main="\nProjected without latlon")
+terra::plot(rx$rrp, zlim=rx$range_orig, main="\nProjected, with custom zlim")
 addBorders()
 dev.off()
 if(interactive()) berryFunctions::openFile(paste0(dir_exmpl,"/Radartests.pdf"))
@@ -148,12 +148,12 @@ rangecheck <- function(rr, orig, proj, tolerance=0.01)
   }
   rc(rr$range_orig, orig, "Range (unprojected)")
   rc(rr$range_proj, proj, "Range (projected)")
-  }
-rangecheck(w1, c( 0.0,  6.2 ), c( 0.00,  5.87))
-rangecheck(w2, c( 0.0,  7.26), c(-0.02,  7.09)) # used to be 72.6 instead of 7.26 (Apr 2022)
-rangecheck(rw, c( 0.0, 30.7 ), c(-0.45, 30.45))
-rangecheck(sf, c( 0.0, 39.2 ), c(-0.03, 38.20))
-rangecheck(rx, c(31.5, 95.0 ), c(18.30, 97.17))
+  }                                             # before terra (June 2023)
+rangecheck(w1, c( 0.0,  6.2 ), c( 0.00,  5.67)) # was  0.00,  5.87 
+rangecheck(w2, c( 0.0,  7.26), c( 0.00,  7.03)) # was -0.02,  7.09  and 72.6 instead of 7.26 (Apr 2022)
+rangecheck(rw, c( 0.0, 30.7 ), c( 0.00, 27.21)) # was -0.45, 30.45 
+rangecheck(sf, c( 0.0, 39.2 ), c( 0.00, 38.13)) # was -0.03, 38.20
+rangecheck(rx, c(31.5, 95.0 ), c(31.50, 95.00)) # was 18.30, 97.17
 testthat::expect_equal("Radar tests passed", "Radar tests passed")
 })
 
@@ -393,21 +393,7 @@ log <- sub(rem, "", log, fixed=TRUE)
 rem <- "\nNote in is.error: Error in plotRadar(ncp1, layer = 1:4, project = FALSE) : 
   3 layers selected that do not exist.\n"
 log <- sub(rem, "", log, fixed=TRUE)
-rem <- "\nFormal class 'RasterBrick' [package \"raster\"] with 13 slots
-  ..@ file    :Formal class '.RasterFile' [package \"raster\"] with 13 slots
-  ..@ data    :Formal class '.MultipleRasterData' [package \"raster\"] with 14 slots
-  ..@ legend  :Formal class '.RasterLegend' [package \"raster\"] with 5 slots
-  ..@ title   : chr \"mean relative humidity at 2 m height\"
-  ..@ extent  :Formal class 'Extent' [package \"raster\"] with 4 slots
-  ..@ rotated : logi FALSE
-  ..@ rotation:Formal class '.Rotation' [package \"raster\"] with 2 slots
-  ..@ ncols   : int 720
-  ..@ nrows   : int 938
-  ..@ crs     :Formal class 'CRS' [package \"sp\"] with 1 slot
-  ..@ srs     : chr \"\"
-  ..@ history : list()
-  ..@ z       :List of 1
- num [1:720, 1:938, 1:30] NA NA NA NA NA NA NA NA NA NA ..."
+rem <- "ToDO: replace this with the terra output"
 
 log <- sub(rem, "", log, fixed=TRUE)
 rem <- "---------------\n.*/Dropbox/Rpack/rdwd/man/.{10,50}\n\n\n"
